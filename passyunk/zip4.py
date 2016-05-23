@@ -1,16 +1,16 @@
 from __future__ import print_function
 
 import csv
-import sys
 import os
 import re
+import sys
 
 __author__ = 'tom.swanson'
 
 cwd = os.path.dirname(__file__)
 cwd += '/pdata'
 # use the cleanded up file
-zip4file = 'uspszip4c'
+zip4file = 'uspszip4'
 
 
 def csv_path(file_name):
@@ -170,7 +170,7 @@ def create_zip4_lookup():
     r2 = NameOnly(ack)
     zip4_basename[p_base] = r2
 
-    validate_zip4_basename()
+    # validate_zip4_basename()
 
     f.close()
     return
@@ -364,7 +364,7 @@ def get_zip_info(address, input_):
                     if len(zips) == 1:
                         address.zipcode = zips[0]
                         address.zip4 = 'NMu'
-                    #print('multiple matches for address with unit num but no type ' + input_, file=sys.stderr)
+                    # print('multiple matches for address with unit num but no type ' + input_, file=sys.stderr)
                     return
 
             # only have a unit type and no unit number
@@ -429,7 +429,10 @@ def get_zip_info(address, input_):
                                                 addr_type == 'FL' and mlist2[0].unit == 'FRNT':
                             pass  # print('Unit No Change - '+ input_ +' : '+ mlist2[0].unit, file=sys.stderr)
                         else:
-                            if address.unit.unit_type == mlist2[0].unit:
+                            if address.unit.unit_type == mlist2[0].unit or (
+                                            address.unit.unit_type == 'UNIT' and mlist2[0].unit == 'APT') or (
+                                            address.unit.unit_type == 'APT' and mlist2[0].unit == 'UNIT'):
+                                address.unit.unit_type = mlist2[0].unit
                                 suppress_msg = True
                             else:
                                 address.unit.unit_type = mlist2[0].unit

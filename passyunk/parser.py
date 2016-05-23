@@ -14,17 +14,16 @@ Version: 1.0
 from __future__ import absolute_import
 
 import csv
-import sys
 import os
 import re
+import sys
 
+from .centerline import create_cl_lookup, get_cl_info
 from .parser_data import STATELIST, CITYLIST, CARDINAL_DIR, PREPOSTDIR, POSTDIR, \
     PREDIR_AS_NAME, \
-    SUFFIX_IN_NAME, zipcode_re, opa_account_re, zipcode_re, po_box_re, AddrType, \
+    SUFFIX_IN_NAME, opa_account_re, zipcode_re, po_box_re, AddrType, \
     ILLEGAL_CHARS_RE
-
-from passyunk.zip4 import create_zip4_lookup, is_zip4_base, get_zip_info
-from passyunk.centerline import create_cl_lookup,get_cl_info
+from .zip4 import create_zip4_lookup, get_zip_info
 
 
 class Addrnum:
@@ -77,7 +76,6 @@ class Address:
         self.seg_id = ''
         self.responsibility = ''
         self.cl_addr_match = ''
-
 
 
 class Unit:
@@ -638,17 +636,35 @@ def handle_city_state_zip(tokens):
 
     if zipcode_re.match(ziptest) is not None:
         ack = ziptest.split('-')
-        # need to handle 5311 FLORENCE AVE UNIT 19112
-        if ziptest.isdigit() and int(ziptest) > 19000 and int(ziptest) < 19300 and tokens[tlen - 2] != 'UNIT':
+
+        if len(ack) == 1:
+            # need to handle 5311 FLORENCE AVE UNIT 19112
+            if int(ack[0]) > 19000 and int(ack[0]) < 19300 and tokens[tlen - 2] != 'UNIT':
+                zipcode = ziptest
+                tokens.remove(ziptest)
+        elif len(ack) == 2:
             zipcode = ack[0]
+
+            # TODO: add return for zip4
+            # zip4 = ack[1]
             tokens.remove(ziptest)
+        else:
+            raise ValueError('Unknown zip4 pattern: {}'.format(ziptest))
+
+    # Could be a 9 digit zip and zip4
+    if opa_account_re.match(ziptest) is not None:
+        if int(ziptest) > 191000000 and int(ziptest) < 192000000:
+            zipcode = ziptest[0:5]
+            tokens.remove(ziptest)
+
     tlen = len(tokens)
     if tlen == 0:
         return ''
     statetest = tokens[tlen - 1]
 
-    #Just make sure that a UNIT of  # PA is not treated as a state.  1010 RACE ST # PA
-    if tlen > 2 and statetest in STATELIST and tokens[tlen - 2] != '#' and tokens[tlen - 2] != 'APT' and tokens[tlen - 2] != 'UNIT':
+    # Just make sure that a UNIT of  # PA is not treated as a state.  1010 RACE ST # PA
+    if tlen > 2 and statetest in STATELIST and tokens[tlen - 2] != '#' and tokens[tlen - 2] != 'APT' and tokens[
+                tlen - 2] != 'UNIT':
         tokens.remove(statetest)
     tlen = len(tokens)
     citytest = tokens[tlen - 1]
@@ -662,7 +678,7 @@ def handle_city_state_zip(tokens):
 def handle_units(tokens, unit):
     tlen = len(tokens)
 
-    # this should simplify the original method and possibly eliminate some of the logic below
+    # this should simplify the original method and possibly eliminate some of the logic at the end of this method
 
     if tlen > 3:
 
@@ -798,7 +814,7 @@ def handle_units(tokens, unit):
                 tlen = len(tokens)
 
     # 1600 N SR 50 60 - junk
-    if len(tokens)>3 and tokens[len(tokens)-1].isdigit() and tokens[len(tokens)-1].isdigit():
+    if len(tokens) > 3 and tokens[len(tokens) - 1].isdigit() and tokens[len(tokens) - 1].isdigit():
         return [-1, '']
 
     # if you get to this point and there is a #, everything after is the unit
@@ -807,12 +823,10 @@ def handle_units(tokens, unit):
     i = 0
     for is_pound in tokens:
         if is_pound == '#':
-            if i+1 == len(tokens):
-                return [-1,'']
-            return [i,' '.join(tokens[i+1:])]
+            if i + 1 == len(tokens):
+                return [-1, '']
+            return [i, ' '.join(tokens[i + 1:])]
         i += 1
-
-
 
     i = 0
     while i < tlen - 1:
@@ -953,7 +967,6 @@ def is_addr(test, ver):
         ihigh_full = ihigh
 
         if len(tokens[0]) > 2:
-
             hundred = (int(tokens[0][0:-2])) * 100
             ilow += hundred
             ihigh_full += hundred
@@ -962,14 +975,13 @@ def is_addr(test, ver):
             tens = (int(tokens[0][0:-1])) * 10
             ihigh_full += tens
 
-        if ilow>ihigh_full:
+        if ver != 2 and ilow > ihigh_full:
             raise ValueError('Addr range, low > high')
 
-        #it shouldn't be a range right?
+        # it shouldn't be a range right?
         if ilow == ihigh_full:
             ihigh = -1
             ihigh_full = -1
-
 
         if tokenlen == 3:
             addr_ret.low_num = ilow
@@ -1119,12 +1131,12 @@ def is_addr(test, ver):
 
     # NN-NN etc - We are going to assume that the user is referring to a philly ranged address and try to create that
     if tokenlen == 3 and tokens[0].isdigit() and tokens[1] == '-' and tokens[2].isdigit():
-        #only if it looks like a good range
+        # only if it looks like a good range
         if (len(tokens[0]) == len(tokens[2])) and len(tokens[0]) >= 3:
             ret = 'NN-NN to NNNN-NN'
             tmp_low = tokens[0]
             tmp_high = tokens[2]
-            #reverse if low is > high
+            # reverse if low is > high
             if int(tokens[0]) > int(tokens[2]):
                 if (int(tokens[2]) - int(tokens[0])) < 100:
                     tmp_low = tokens[2]
@@ -1133,7 +1145,7 @@ def is_addr(test, ver):
                 else:
                     raise ValueError('Bad Address Range: {}'.format(test))
 
-            #Leave it alone
+            # Leave it alone
             if abs((int(tokens[0]) - int(tokens[2]))) > 100:
                 addr_ret.low_num = int(tmp_low)
                 addr_ret.high_num_full = int(tmp_high)
@@ -1154,7 +1166,7 @@ def is_addr(test, ver):
             addr_ret.high_num = ihigh
             addr_ret.high = str(ihigh)
             if len(addr_ret.high) == 1:
-                addr_ret.high = '0'+addr_ret.high
+                addr_ret.high = '0' + addr_ret.high
 
             if addr_ret.low_num % 2 == 0:
                 alowoeb = 'E'
@@ -1171,7 +1183,7 @@ def is_addr(test, ver):
 
             addr_ret.parity = ahighoeb
 
-            #it should be a range if it is equal
+            # it should be a range if it is equal
             if tmp_low == tmp_high:
                 ret = 'NN=NN'
                 addr_ret.high_num_full = -1
@@ -1182,11 +1194,11 @@ def is_addr(test, ver):
             addr_ret.isaddr = True
             return addr_ret
 
-        #otherwise, leave as is
+        # otherwise, leave as is
         else:
             addr_ret.low_num = int(tokens[0])
             addr_ret.high_num = int(tokens[2])
-            if addr_ret.low_num>addr_ret.high_num:
+            if ver != 2 and addr_ret.low_num > addr_ret.high_num:
                 raise ValueError('Addr range, low > high')
             addr_ret.low = tokens[0]
             addr_ret.high = tokens[2]
@@ -1322,7 +1334,7 @@ def centerline_rematch(address):
 
 
 
-    # street_centerline_lookup, street_centerline_name_lookup,name_lookup,pre_lookup,suffix_lookup
+            # street_centerline_lookup, street_centerline_name_lookup,name_lookup,pre_lookup,suffix_lookup
 
 
 def parse_po_box(input_addr):
@@ -1341,7 +1353,7 @@ def parse(item):
     if item == '':
         address_uber.type = AddrType.none
         raise ValueError('Address not specified: {}'.format(item))
-        #return address_uber
+        # return address_uber
 
     # if you get a 9 digit numeric, treat it as an OPA account
     opa_account_search = opa_account_re.search(item)
@@ -1355,19 +1367,24 @@ def parse(item):
         address_uber.type = AddrType.account
 
     if len(item) == 5 and zipcode_search:
-        if int(item)>=19100 and int(item)<=19199:
+        if int(item) >= 19100 and int(item) <= 19199:
             address_uber.components.street_address = item
             address_uber.type = AddrType.zipcode
         else:
             raise ValueError('Invalid zipcode')
 
-    elif ' AND ' in item and item[-8:] != ' A AND B' :
+    elif ' AND ' in item and item[-8:] != ' A AND B':
         tokens = item.split(' AND ')
         address = parse_addr_1(address, tokens[0])
-        address2 = Address()
-        address2 = parse_addr_1(address2, tokens[1])
-        address.street_2 = address2.street
-        address_uber.type = AddrType.intersection_addr
+        # for some reason there are numerous addresses like this in the logs - 127 VASSAR ST/LI
+        if tokens[1] == 'LI':
+            address_uber.type = AddrType.address
+        else:
+
+            address2 = Address()
+            address2 = parse_addr_1(address2, tokens[1])
+            address.street_2 = address2.street
+            address_uber.type = AddrType.intersection_addr
 
     elif po_box_search:
         search = po_box_re.search(item)
@@ -1409,11 +1426,10 @@ def parse(item):
     create_full_names(address, address_uber.type)
 
     if address_uber.type == AddrType.address:
-        get_zip_info(address,address_uber.input_address)
-        get_cl_info(address,address_uber.input_address)
+        get_zip_info(address, address_uber.input_address)
+        get_cl_info(address, address_uber.input_address)
         if address_uber.components.unit.unit_type == '' and address_uber.components.unit.unit_num != '':
             address_uber.components.unit.unit_type = '#'
-
 
     if address_uber.type == AddrType.intersection and address.base_address.find(' & ') == -1:
         address_uber.type = AddrType.address
@@ -1440,7 +1456,6 @@ def parse(item):
     temp_centerline = is_centerline_name(address_uber.components.street_2.full)
     if temp_centerline.full != '0':
         address_uber.components.street_2.is_centerline_match = True
-
 
     if address_uber.components.base_address == '':
         address_uber.components.base_address = None
@@ -1524,10 +1539,10 @@ def input_cleanup(address_uber, item):
     item = ILLEGAL_CHARS_RE.sub('', item)
 
     items = item.split('#')
-    if len(items) >2:
+    if len(items) > 2:
         item = "{} # {}".format(items[0], items[2])
 
-    #get rid of trailing #  1608 South St #
+    # get rid of trailing #  1608 South St #
     if len(items) == 2 and items[1] == '':
         item = items[0]
 
@@ -1620,19 +1635,26 @@ def parse_addr_1(address, item):
         address.street.parse_method = 'UNK'
         return address
     address.unit.unit_type = ''
+
+    # intial attempt at getting R or Rear at the front of the address and treat it as REAR unit
+    if token_len > 2 and (tokens[0] == 'R' or tokens[0] == 'REAR'):
+        pre_dir = is_dir(tokens[1])
+        if pre_dir.std != '0':
+            tokens.remove(tokens[0])
+            address.unit.unit_type = 'REAR'
+
     units = handle_units(tokens, address.unit)
 
     if units[0] != -1 and address.unit.unit_type == '':
         tokens = unitdesigantor_second_pass(address, units, tokens)
 
-
-    #  Fix for addresses like this - 90 E JOHNSON ST # 2ND FL R #32
+    # Fix for addresses like this - 90 E JOHNSON ST # 2ND FL R #32
     # 1608 South St # <- should be handled in cleanup
     i = 0
     for t in tokens:
-        i+=1
+        i += 1
         if t == '#':
-            tokens = tokens[:i-1]
+            tokens = tokens[:i - 1]
 
     if len(tokens) == 0:
         return address
@@ -2086,7 +2108,7 @@ def parse_addr_1(address, item):
             address.street.parse_method = '5APNNSx'
             return address
 
-    #raise error at this point
+    # raise error at this point
     address.street.parse_method = 'TODO'
     address.street.name = ' '.join(name_std(tokens, True))
     return address
@@ -2161,16 +2183,3 @@ class PassyunkParser:
             return parsed_out.__dict__
 
         return parsed_out
-
-
-# TEST
-if __name__ == '__main__':
-    parser = PassyunkParser()
-    #137 W SUSQUEHANNA AVE # 2ND FRONT
-
-    parsed = parser.parse('1842 STRAHLE ST')
-    # print(parsed)
-
-    import json
-
-    print(json.dumps(parsed, sort_keys=True, indent=2))

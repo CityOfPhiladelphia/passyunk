@@ -1,9 +1,8 @@
 from __future__ import print_function
 
 import csv
-import sys
 import os
-import re
+import sys
 
 __author__ = 'tom.swanson'
 
@@ -35,16 +34,18 @@ class Centerline:
         self.st_code = row[8]
         self.seg_id = row[9]
         self.responsibility = row[10].strip()
-        self.base = '{} {} {} {}'.format(self.pre,self.name,self.suffix,self.post)
+        self.base = '{} {} {} {}'.format(self.pre, self.name, self.suffix, self.post)
         self.base = ' '.join(self.base.split())
-        self.oeb_right = oeb(self.from_right,self.to_right)
+        self.oeb_right = oeb(self.from_right, self.to_right)
         self.oeb_left = oeb(self.from_left, self.to_left)
+
 
 class NameOnly:
     def __init__(self, row):
         self.name = row[0]
         self.low = row[1]
         self.high = row[2]
+
 
 def create_cl_lookup():
     path = csv_path(cl_file)
@@ -99,7 +100,8 @@ def create_cl_lookup():
     f.close()
     return
 
-def oeb(fr,to):
+
+def oeb(fr, to):
     ret = 'U'
     if fr == '' or fr == '0' or to == '' or to == '0':
         return 'U'
@@ -118,6 +120,7 @@ def oeb(fr,to):
 
     return ret
 
+
 def validate_cl_basename():
     for r in cl_basename:
         row = cl_basename[r]
@@ -128,6 +131,7 @@ def validate_cl_basename():
         if len(name) > 1:
             for ack in name:
                 print(ack)
+
 
 def is_cl_base(test):
     try:
@@ -148,6 +152,7 @@ def is_cl_name(test):
         return row
     return cl_list[name.low:name.high]
 
+
 def get_cl_info(address, input_):
     cl_list = is_cl_base(address.street.full)
 
@@ -159,12 +164,13 @@ def get_cl_info(address, input_):
             elif row.from_right <= address.address.low_num and row.to_right >= address.address.low_num and row.oeb_right == address.address.parity:
                 mlist.append(row)
 
-        #good street name but no matching address range
+        # good street name but no matching address range
         if len(mlist) == 0:
             address.st_code = row.st_code
-            address.cl_addr_match = 'S'
+            address.cl_addr_match = 'S1'
             return
 
+        # Exact Match
         if len(mlist) == 1:
             address.st_code = mlist[0].st_code
             address.seg_id = mlist[0].seg_id
@@ -172,9 +178,11 @@ def get_cl_info(address, input_):
             address.cl_addr_match = 'A'
             return
 
+        # Exact Street match, multiple range matches, return the count of matches
         if len(mlist) > 1:
             address.st_code = row.st_code
-            address.cl_addr_match = str(len(mlist))
+            address.cl_addr_match = 'AM'
+            # address.cl_addr_match = str(len(mlist))
             return
 
     cl_list = is_cl_name(address.street.name)
@@ -183,38 +191,56 @@ def get_cl_info(address, input_):
         mlist = []
         for row in cl_list:
             if row.from_left <= address.address.low_num and row.to_left >= address.address.low_num and row.oeb_left == address.address.parity:
-                if (address.street.predir != '' and address.street.predir == row.pre) or (address.street.predir == '' and row.pre == '') or (address.street.predir == '' and row.pre != ''):
-                    if (address.street.postdir != '' and address.street.postdir == row.post) or (address.street.postdir == '' and row.post == '')or (address.street.postdir == '' and row.post != ''):
-                        if (address.street.suffix != '' and address.street.suffix == row.suffix) or (address.street.suffix == '' and row.suffix == '') or (address.street.suffix == '' and row.suffix != ''):
+                if (address.street.predir != '' and address.street.predir == row.pre) or (
+                                address.street.predir == '' and row.pre == '') or (
+                                address.street.predir == '' and row.pre != '') or (
+                                address.street.predir != '' and row.pre == ''):
+                    if (address.street.postdir != '' and address.street.postdir == row.post) or (
+                                    address.street.postdir == '' and row.post == '') or (
+                                    address.street.postdir == '' and row.post != '') or (
+                                    address.street.postdir != '' and row.post == ''):
+                        if (address.street.suffix != '' and address.street.suffix == row.suffix) or (
+                                        address.street.suffix == '' and row.suffix == '') or (
+                                        address.street.suffix == '' and row.suffix != '') or (
+                                        address.street.suffix != '' and row.suffix == ''):
                             mlist.append(row)
             elif row.from_right <= address.address.low_num and row.to_right >= address.address.low_num and row.oeb_right == address.address.parity:
                 if (address.street.predir != '' and address.street.predir == row.pre) or (
-                        address.street.predir == '' and row.pre == '') or (
-                        address.street.predir == '' and row.pre != ''):
+                                address.street.predir == '' and row.pre == '') or (
+                                address.street.predir == '' and row.pre != '') or (
+                                address.street.predir != '' and row.pre == ''):
                     if (address.street.postdir != '' and address.street.postdir == row.post) or (
-                            address.street.postdir == '' and row.post == '') or (
-                            address.street.postdir == '' and row.post != ''):
+                                    address.street.postdir == '' and row.post == '') or (
+                                    address.street.postdir == '' and row.post != '') or (
+                                    address.street.postdir != '' and row.post == ''):
                         if (address.street.suffix != '' and address.street.suffix == row.suffix) or (
-                                address.street.suffix == '' and row.suffix == '') or (
-                                address.street.suffix == '' and row.suffix != ''):
+                                        address.street.suffix == '' and row.suffix == '') or (
+                                        address.street.suffix == '' and row.suffix != '') or (
+                                        address.street.suffix != '' and row.suffix == ''):
                             mlist.append(row)
 
         # good street name but no matching address range
         if len(mlist) == 0:
-            address.cl_addr_match = 'N'
+            address.cl_addr_match = 'S2'
             return
 
         if len(mlist) == 1:
-            address.street.pre = mlist[0].pre
-            address.street.post = mlist[0].post
-            address.street.suffix = mlist[0].suffix
+            match = 'B'
+            if address.street.predir != mlist[0].pre:
+                match += ' Pre'
+                address.street.predir = mlist[0].pre
+            if address.street.postdir != mlist[0].post:
+                match += ' Post'
+                address.street.postdir = mlist[0].post
+            if address.street.suffix != mlist[0].suffix:
+                match += ' Suffix'
+                address.street.suffix = mlist[0].suffix
             address.st_code = mlist[0].st_code
             address.seg_id = mlist[0].seg_id
             address.responsibility = mlist[0].responsibility
-            address.cl_addr_match = 'B'
-        #need to resolve dir ans suffix
+            address.cl_addr_match = match
+        # need to resolve dir and/or suffix
         if len(mlist) > 1:
             address.st_code = row.st_code
-            address.cl_addr_match = str(len(mlist))
+            address.cl_addr_match = 'BM'  # str(len(mlist))
             return
-
