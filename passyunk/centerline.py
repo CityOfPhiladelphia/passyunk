@@ -8,12 +8,12 @@ __author__ = 'tom.swanson'
 
 cwd = os.path.dirname(__file__)
 cwd += '/pdata'
-# use the cleanded up file
+#cwd = cwd.replace('\\','/')
 cl_file = 'centerline'
 
 
 def csv_path(file_name):
-    return os.path.join(cwd, file_name + '.csv')
+    return os.path.join(cwd, file_name + '.csv').replace('\\','/')
 
 
 cl_basename = {}
@@ -46,6 +46,9 @@ class NameOnly:
         self.low = row[1]
         self.high = row[2]
 
+def test_cl_file():
+    path = csv_path(cl_file)
+    return os.path.isfile(path)
 
 def create_cl_lookup():
     path = csv_path(cl_file)
@@ -158,16 +161,44 @@ def get_cl_info(address, input_):
 
     if len(cl_list) > 0:
         mlist = []
+        number_distance = 1000000
+        addr_near = 0
+        number_distance_rec = {}
         for row in cl_list:
             if row.from_left <= address.address.low_num and row.to_left >= address.address.low_num and row.oeb_left == address.address.parity:
                 mlist.append(row)
             elif row.from_right <= address.address.low_num and row.to_right >= address.address.low_num and row.oeb_right == address.address.parity:
                 mlist.append(row)
+            else:
+                if row.from_left != 0 and abs(row.from_left - address.address.low_num) < number_distance:
+                    number_distance = abs(row.from_left - address.address.low_num)
+                    number_distance_rec = row
+                    addr_near = row.from_left
+                if row.from_left != 0 and abs(row.from_right - address.address.low_num) < number_distance:
+                    number_distance = abs(row.from_right - address.address.low_num)
+                    number_distance_rec = row
+                    addr_near = row.from_right
+                if row.from_left != 0 and abs(address.address.low_num - row.to_left) < number_distance:
+                    number_distance = abs(address.address.low_num - row.to_left)
+                    number_distance_rec = row
+                    addr_near = row.to_left
+                if row.from_left != 0 and abs(address.address.low_num - row.to_right) < number_distance:
+                    number_distance = abs(address.address.low_num - row.to_right)
+                    number_distance_rec = row
+                    addr_near = row.to_right
 
         # good street name but no matching address range
+        if len(mlist) == 0 and number_distance != 1000000:
+            address.st_code = number_distance_rec.st_code
+            address.seg_id =number_distance_rec.seg_id
+            address.responsibility = number_distance_rec.responsibility
+            address.cl_addr_match = 'RANGE:'+str(number_distance)
+            address.address.full = str(addr_near)
+            return
+
         if len(mlist) == 0:
             address.st_code = row.st_code
-            address.cl_addr_match = 'S1'
+            address.cl_addr_match = 'MATCH TO STREET WITH NO ADDR RANGE'
             return
 
         # Exact Match

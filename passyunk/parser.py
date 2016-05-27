@@ -18,12 +18,12 @@ import os
 import re
 import sys
 
-from .centerline import create_cl_lookup, get_cl_info
+from .centerline import create_cl_lookup, get_cl_info, test_cl_file
 from .parser_data import STATELIST, CITYLIST, CARDINAL_DIR, PREPOSTDIR, POSTDIR, \
     PREDIR_AS_NAME, \
     SUFFIX_IN_NAME, opa_account_re, zipcode_re, po_box_re, AddrType, \
     ILLEGAL_CHARS_RE
-from .zip4 import create_zip4_lookup, get_zip_info
+from .zip4 import create_zip4_lookup, get_zip_info, test_zip4_file
 
 
 class Addrnum:
@@ -1422,12 +1422,19 @@ def parse(item):
         centerline_rematch(address.street)
         centerline_rematch(address.street_2)
 
-    get_cl_info(address, address_uber.input_address)
+
     create_full_names(address, address_uber.type)
 
-    if address_uber.type == AddrType.address:
-        get_zip_info(address, address_uber.input_address)
+    # if the users doesn't have the centerline file, parser will still work
+    if test_cl_file():
         get_cl_info(address, address_uber.input_address)
+    if address_uber.type == AddrType.address:
+        #if the users doesn't have the zip4 file, parser will still work
+        if test_zip4_file():
+            get_zip_info(address, address_uber.input_address)
+            create_full_names(address, address_uber.type)
+        #if test_cl_file:
+            #get_cl_info(address, address_uber.input_address)
         if address_uber.components.unit.unit_type == '' and address_uber.components.unit.unit_num != '':
             address_uber.components.unit.unit_type = '#'
 
@@ -1463,6 +1470,20 @@ def parse(item):
         address_uber.components.zipcode = None
     if address_uber.components.zip4 == '':
         address_uber.components.zip4 = None
+    if address_uber.components.uspstype == '':
+        address_uber.components.uspstype = None
+    if address_uber.components.bldgfirm == '':
+        address_uber.components.bldgfirm = None
+    if address_uber.components.cl_addr_match == '':
+        address_uber.components.cl_addr_match = None
+    if address_uber.components.matchdesc == '':
+        address_uber.components.matchdesc = None
+    if address_uber.components.responsibility == '':
+        address_uber.components.responsibility = None
+    if address_uber.components.seg_id == '':
+        address_uber.components.seg_id = None
+    if address_uber.components.st_code == '':
+        address_uber.components.st_code = None
 
     if address_uber.components.address.addr_suffix == '':
         address_uber.components.address.addr_suffix = None
@@ -1747,7 +1768,7 @@ def parse_addr_1(address, item):
             # WEST END
             if '{} {}'.format(pre_dir.full, tokens[1]) in PREDIR_AS_NAME:
                 address.street.predir = ''
-                address.street.name = ' '.join(name_std(tokens[0:-1], True))
+                address.street.name = '{} {}'.format(pre_dir.full, tokens[1])
                 address.street.suffix = suffix_minus_one.correct
                 address.street.postdir = ''
                 address.street.parse_method = '3NNS predir'
@@ -2161,8 +2182,12 @@ aptStdLookup = createaptstdlookup()
 add_ordinal_lookup = create_ordinal_lookup()
 name_switch_lookup = create_name_switch_lookup()
 street_centerline_lookup, street_centerline_name_lookup, cl_name_lookup, cl_pre_lookup, cl_suffix_lookup = create_centerline_street_lookup()
-create_zip4_lookup()
-create_cl_lookup()
+
+#if the users doesn't have the zip4 or centerline file, parser will still work
+if test_zip4_file() == True:
+    create_zip4_lookup()
+if test_cl_file() == True:
+    create_cl_lookup()
 
 
 class PassyunkParser:

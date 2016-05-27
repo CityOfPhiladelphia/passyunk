@@ -12,9 +12,8 @@ cwd += '/pdata'
 # use the cleanded up file
 zip4file = 'uspszip4'
 
-
 def csv_path(file_name):
-    return os.path.join(cwd, file_name + '.csv')
+    return os.path.join(cwd, file_name + '.csv').replace('\\','/')
 
 
 zip4_basename = {}
@@ -121,6 +120,9 @@ def parse_unit_num(unitnum):
 
     return rt
 
+def test_zip4_file():
+    path = csv_path(zip4file)
+    return os.path.isfile(path)
 
 def create_zip4_lookup():
     path = csv_path(zip4file)
