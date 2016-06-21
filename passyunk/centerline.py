@@ -273,5 +273,5 @@ def get_cl_info(address, input_):
         # need to resolve dir and/or suffix
         if len(mlist) > 1:
             address.st_code = row.st_code
-            address.cl_addr_match = 'BM'  # str(len(mlist))
+            address.cl_addr_match = 'MULTI'  # str(len(mlist))
             return

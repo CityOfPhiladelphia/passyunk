@@ -358,7 +358,7 @@ def get_zip_info(address, input_):
                         address.zipcode = zips[0]
                         address.zip4 = 'NMx'
                         return
-                    print('Todo: 0 matches for address with unit num but no type ' + input_, file=sys.stderr)
+                    #print('Todo: 0 matches for address with unit num but no type ' + input_, file=sys.stderr)
 
                 if len(mlist2) > 1:
                     # might be able to get a good zipcode still
@@ -390,7 +390,7 @@ def get_zip_info(address, input_):
                     zips = get_unique_zipcodes(mlist)
                     if len(zips) == 1:
                         address.zipcode = zips[0]
-                    print('multiple matches for address with unit type but no number ' + input_, file=sys.stderr)
+                    #print('multiple matches for address with unit type but no number ' + input_, file=sys.stderr)
                     return
 
             if address.unit.unit_num != '' and addr_type != '':
@@ -446,8 +446,8 @@ def get_zip_info(address, input_):
                             # need because of addrs like this - 3900 FORD ROAD UNIT PH
                             if address.unit.unit_type == address.unit.unit_num:
                                 address.unit.unit_num = ''
-                            if suppress_msg == False:
-                                print('Unit Change - ' + input_ + ' : ' + mlist2[0].unit, file=sys.stderr)
+                            #if suppress_msg == False:
+                                #print('Unit Change - ' + input_ + ' : ' + mlist2[0].unit, file=sys.stderr)
                             return
 
                     # might be able to get a good zipcode still
@@ -457,7 +457,7 @@ def get_zip_info(address, input_):
                         address.zip4 = 'NM'
                         return
 
-                    print('Todo: 0 matches for address with unit type and  number ' + input_, file=sys.stderr)
+                    #print('Todo: 0 matches for address with unit type and  number ' + input_, file=sys.stderr)
 
                 if len(mlist2) > 1:
                     for m in mlist2:
@@ -478,7 +478,7 @@ def get_zip_info(address, input_):
                               file=sys.stderr)
                     return
 
-            print('multiple: ' + input_, file=sys.stderr)
+            #print('multiple: ' + input_, file=sys.stderr)
             # else:
             #     print('no zip: '+address.address.full+' '+address.street.full, file=sys.stderr)
 

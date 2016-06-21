@@ -8,8 +8,8 @@ import os
 import re
 
 __author__ = 'tom.swanson'
-infile = 'uspszip4'
-outfile = 'uspszip4c'
+infile = 'uspszip4_origin'
+outfile = 'uspszip4'
 
 cwd = os.path.dirname(__file__)
 
