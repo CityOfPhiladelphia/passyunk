@@ -2336,8 +2336,6 @@ def unitdesigantor_second_pass(address, apt, tokens):
 '''
 RUN
 '''
-sys.setrecursionlimit(100)
-
 cwd = os.path.dirname(__file__)
 cwd += '/pdata'
 # Get config
