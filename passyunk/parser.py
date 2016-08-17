@@ -18,13 +18,18 @@ import os
 import re
 import sys
 
-from .centerline import create_cl_lookup, get_cl_info, test_cl_file
+
+from .centerline import create_cl_lookup, get_cl_info
 from .parser_data import STATELIST, CITYLIST, CARDINAL_DIR, PREPOSTDIR, POSTDIR, \
     PREDIR_AS_NAME, \
     SUFFIX_IN_NAME, opa_account_re, zipcode_re, po_box_re, AddrType, \
     ILLEGAL_CHARS_RE
 from .zip4 import create_zip4_lookup, get_zip_info, test_zip4_file
+from .election import create_election_lookup, get_election_info
 
+is_cl_file = False
+is_election_file = False
+is_zip_file = False
 
 class Addrnum:
     def __init__(self):
@@ -50,6 +55,7 @@ class Street:
         self.postdir = ''
         self.parse_method = ''
         self.is_centerline_match = False
+        self.score = None
 
 
 class AddressUber:
@@ -67,6 +73,7 @@ class Address:
         self.street = Street()
         self.street_2 = Street()
         self.unit = Unit()
+        self.election = Election()
         self.zipcode = ''
         self.zip4 = ''
         self.uspstype = ''
@@ -83,6 +90,10 @@ class Unit:
         self.unit_num = ''
         self.unit_type = ''
 
+class Election:
+    def __init__(self):
+        self.blockid = ''
+        self.precinct = ''
 
 class Nameswitch:
     def __init__(self, row):
@@ -564,7 +575,7 @@ def create_full_names(address, addr_type):
 
     if address.address.isaddr:
         # no Range
-        if address.address.low_num >= 0 and address.address.high_num < 0:
+        if address.address.low_num >= 0 > address.address.high_num:
             address.address.full = address.address.low
             # if address.address.addr_suffix != '':
             #    address.address.full = address.address.full+address.address.addr_suffix
@@ -629,6 +640,11 @@ def handle_st(tokens):
 
 
 def handle_city_state_zip(tokens):
+    tlen = len(tokens)
+
+    if tokens[tlen - 1] == 'USA':
+        tokens.pop()
+
     zipcode = ''
     tlen = len(tokens)
     # check for a valid Philadelphia zipcode
@@ -639,7 +655,7 @@ def handle_city_state_zip(tokens):
 
         if len(ack) == 1:
             # need to handle 5311 FLORENCE AVE UNIT 19112
-            if int(ack[0]) > 19000 and int(ack[0]) < 19300 and tokens[tlen - 2] != 'UNIT':
+            if 19000 < int(ack[0]) < 19300 and tokens[tlen - 2] != 'UNIT':
                 zipcode = ziptest
                 tokens.remove(ziptest)
         elif len(ack) == 2:
@@ -651,9 +667,17 @@ def handle_city_state_zip(tokens):
         else:
             raise ValueError('Unknown zip4 pattern: {}'.format(ziptest))
 
+    tlen = len(tokens)
+    if tlen >3 and tokens[tlen - 1].isdigit() and tokens[tlen - 2].isdigit():
+        if 19000 < int(tokens[tlen - 2]) < 19300 and 1000 < int(tokens[tlen - 1]) < 9999:
+            zipcode = tokens[tlen - 2]
+            tokens.pop()
+            tokens.pop()
+
+
     # Could be a 9 digit zip and zip4
     if opa_account_re.match(ziptest) is not None:
-        if int(ziptest) > 191000000 and int(ziptest) < 192000000:
+        if 191000000 < int(ziptest) < 192000000:
             zipcode = ziptest[0:5]
             tokens.remove(ziptest)
 
@@ -738,7 +762,7 @@ def handle_units(tokens, unit):
                         unit.unit_num = aptstd
 
             else:
-                unit.unit_num = apttest.replace(' ','')  # no space in unit num
+                unit.unit_num = apttest.replace(' ', '')  # no space in unit num
                 unit.unit_type = '#'
 
             tokens.pop()
@@ -791,7 +815,7 @@ def handle_units(tokens, unit):
                 tokens[tlen - 2] = temp[0]
                 tokens.pop()
             # The units were standardized so run again. Watch out for endless loop
-            return  handle_units(tokens, unit)
+            return handle_units(tokens, unit)
 
     # now lets try the last token
     if tlen > 2:
@@ -829,17 +853,17 @@ def handle_units(tokens, unit):
             return [i, ' '.join(tokens[i + 1:])]
         i += 1
 
-    #399 E UPSAL ST APT
-    if len(tokens)>3:
-        apt = is_apt(tokens[len(tokens)-1])
+    # 399 E UPSAL ST APT
+    if len(tokens) > 3:
+        apt = is_apt(tokens[len(tokens) - 1])
         apte = is_apte(tokens[len(tokens) - 1])
-        suff = issuffix(tokens[len(tokens)-2])
+        suff = issuffix(tokens[len(tokens) - 2])
 
         if apte.correct != '':
             return [len(tokens) - 1, apte.correct]
 
         if apt.correct != '' and suff.std == '1':
-            return [len(tokens)-1,apt.correct]
+            return [len(tokens) - 1, apt.correct]
 
     i = 0
     while i < tlen - 1:
@@ -951,13 +975,12 @@ def is_addr(test, ver):
     if half:
         addr_ret.fractional = '1/2'
 
-
     # 123-25
-    if tokenlen == 3  and \
+    if tokenlen == 3 and \
             tokens[0].isdigit() and \
-            tokens[1] == '-' and \
-            len(tokens[2]) <= 2 and \
-            tokens[2].isdigit() :
+                    tokens[1] == '-' and \
+                    len(tokens[2]) <= 2 and \
+            tokens[2].isdigit():
 
         if len(tokens[2]) == 1:
             alowst = tokens[0][-1:]
@@ -990,11 +1013,11 @@ def is_addr(test, ver):
             tens = (int(tokens[0][0:-1])) * 10
             ihigh_full += tens
 
-        #No Range if High is > Low
+        # No Range if High is > Low
         if ver != 2 and ilow > ihigh_full:
             ihigh = -1
             ihigh_full = -1
-            #raise ValueError('Addr range, low > high')
+            # raise ValueError('Addr range, low > high')
 
         # it shouldn't be a range right?
         if ilow == ihigh_full:
@@ -1015,7 +1038,6 @@ def is_addr(test, ver):
             addr_ret.addrnum_type = 'NNNN-NN'
         addr_ret.isaddr = True
 
-
         return addr_ret
 
     # 925R-35
@@ -1023,7 +1045,7 @@ def is_addr(test, ver):
                 tokens[2] == '-' and
                 len(tokens[1]) == 1 and
                 len(tokens[3]) <= 2 and
-                tokens[3].isdigit()):
+            tokens[3].isdigit()):
 
         alowst = tokens[0][-2:]
         ahighst = tokens[3][-2:]
@@ -1470,6 +1492,19 @@ def centerline_rematch(address):
             address.postdir = centerline_name[0].post
             address.parse_method = 'CL_N'
             address.is_centerline_match = True
+            return
+        if len(test) > 3 and test[-1] == 'S':
+            test = test[0:-1]
+            centerline_name = is_centerline_street_name(test)
+            if len(centerline_name) == 1:
+                address.predir = centerline_name[0].pre
+                address.name = centerline_name[0].name
+                address.suffix = centerline_name[0].suffix
+                address.postdir = centerline_name[0].post
+                address.parse_method = 'CL_N'
+                address.is_centerline_match = True
+                return
+
 
     if address.predir != '' and address.postdir == '' and address.suffix == '':
         test = address.predir + ' ' + address.name
@@ -1526,7 +1561,7 @@ def parse(item):
         address_uber.type = AddrType.account
 
     if len(item) == 5 and zipcode_search:
-        if int(item) >= 19100 and int(item) <= 19199:
+        if 19100 <= int(item) <= 19199:
             address_uber.components.street_address = item
             address_uber.type = AddrType.zipcode
         else:
@@ -1587,19 +1622,25 @@ def parse(item):
     if address_uber.components.seg_id != '':
         address_uber.components.street.is_centerline_match = True
 
-
     create_full_names(address, address_uber.type)
 
     # if the users doesn't have the centerline file, parser will still work
-    if test_cl_file():
+    if is_cl_file:
         get_cl_info(address, address_uber.input_address)
+        create_full_names(address, address_uber.type)
     if address_uber.type == AddrType.address:
-        #if the users doesn't have the zip4 file, parser will still work
-        if test_zip4_file():
+        # if the users doesn't have the zip4 file, parser will still work
+
+
+        if is_zip_file:
             get_zip_info(address, address_uber.input_address)
             create_full_names(address, address_uber.type)
-        #if test_cl_file:
-            #get_cl_info(address, address_uber.input_address)
+
+        #important that full names are created before adding election
+        if is_election_file:
+                get_election_info(address, address_uber.input_address)
+            # if test_cl_file:
+            # get_cl_info(address, address_uber.input_address)
         if address_uber.components.unit.unit_type == '' and address_uber.components.unit.unit_num != '':
             address_uber.components.unit.unit_type = '#'
 
@@ -1699,6 +1740,11 @@ def parse(item):
     if address_uber.components.street_2.postdir == '':
         address_uber.components.street_2.postdir = None
 
+    if address_uber.components.election.blockid == '':
+        address_uber.components.election.blockid = None
+    if address_uber.components.election.precinct == '':
+        address_uber.components.election.precinct = None
+
     if address_uber.components.unit.unit_num == '':
         address_uber.components.unit.unit_num = None
     if address_uber.components.unit.unit_num == -1:
@@ -1756,6 +1802,12 @@ def name_switch(address):
 
 
 def parse_addr_1(address, item):
+    # Remove ES, WS, NS, SS
+    item = re.sub(' (NS|SS|ES|WS)$', '', item)
+    item = item.replace('UNIT BLK','1')
+    item = item.replace(' OPP ',' ')
+    if item.startswith('OPP '):
+        item = item[4:]
     tokens = item.split()
 
     # This is just for speed, check for clean address match, handle, and return
@@ -2180,7 +2232,7 @@ def parse_addr_1(address, item):
             address.street.predir = pre_dir.correct
             # special case OPS address 7 N CHRIS COLUMBUS BLVD PARK
             if tokens[token_len - 1] == 'PARK':
-                address.unit.unit_type == 'PARK'
+                address.unit.unit_type = 'PARK'
                 address.street.name = ' '.join(name_std(tokens[1:-2], True))
                 address.street.suffix = suffix_minus_one.correct
             else:
@@ -2336,6 +2388,7 @@ def unitdesigantor_second_pass(address, apt, tokens):
 '''
 RUN
 '''
+
 cwd = os.path.dirname(__file__)
 cwd += '/pdata'
 # Get config
@@ -2353,12 +2406,10 @@ add_ordinal_lookup = create_ordinal_lookup()
 name_switch_lookup = create_name_switch_lookup()
 street_centerline_lookup, street_centerline_name_lookup, cl_name_lookup, cl_pre_lookup, cl_suffix_lookup = create_centerline_street_lookup()
 
-#if the users doesn't have the zip4 or centerline file, parser will still work
-if test_zip4_file() == True:
-    create_zip4_lookup()
-if test_cl_file() == True:
-    create_cl_lookup()
-
+# if the users doesn't have the zip4 or centerline file, parser will still work
+is_zip_file = create_zip4_lookup()
+is_cl_file = create_cl_lookup()
+is_election_file = create_election_lookup()
 
 class PassyunkParser:
     def __init__(self, return_dict=True):
@@ -2374,6 +2425,7 @@ class PassyunkParser:
             parsed_out.components.street = parsed_out.components.street.__dict__
             parsed_out.components.street_2 = parsed_out.components.street_2.__dict__
             parsed_out.components.unit = parsed_out.components.unit.__dict__
+            parsed_out.components.election = parsed_out.components.election.__dict__
             parsed_out.components = parsed_out.components.__dict__
             return parsed_out.__dict__
 

@@ -125,6 +125,8 @@ def test_zip4_file():
     return os.path.isfile(path)
 
 def create_zip4_lookup():
+    if not test_zip4_file():
+        return False
     path = csv_path(zip4file)
     f = open(path, 'r')
     i = 0
@@ -175,7 +177,7 @@ def create_zip4_lookup():
     # validate_zip4_basename()
 
     f.close()
-    return
+    return True
 
 
 def validate_zip4_basename():
@@ -231,7 +233,7 @@ def get_zip_info(address, input_):
     if len(zlist) > 0:
         mlist = []
         for row in zlist:
-            if row.low <= address.address.low_num and row.high >= address.address.low_num and (
+            if row.low <= address.address.low_num <= row.high and (
                             address.address.parity == row.oeb or row.oeb == 'B'):
                 # if address.unit.unit_type == '' and address.unit.unit_num =='' and row.unit == '' and row.unitlow.full == '':
                 #     mlist.append(row)
@@ -287,9 +289,9 @@ def get_zip_info(address, input_):
                     # Compare unit nums in a try statement to keep Python 3 from
                     # complaining about mixed str/int types.
                     try:
-                        if m.unitlow.num <= addr_unit.num and m.unithigh.num >= addr_unit.num and m.unitlow.pre == addr_unit.pre and m.unitlow.post <= addr_unit.post and m.unithigh.post >= addr_unit.post:
+                        if m.unitlow.num <= addr_unit.num <= m.unithigh.num and m.unitlow.pre == addr_unit.pre and m.unitlow.post <= addr_unit.post <= m.unithigh.post:
                             mlist2.append(m)
-                        if addr_unit.num == -1 and m.unitlow.full <= addr_unit.num and m.unithigh.full >= addr_unit.num:
+                        if addr_unit.num == -1 and m.unitlow.full <= addr_unit.num <= m.unithigh.full:
                             mlist2.append(m)
                     except TypeError:
                         pass
@@ -398,13 +400,11 @@ def get_zip_info(address, input_):
                 # TODO handle OEB
                 for m in mlist:
                     if m.unit == address.unit.unit_type and \
-                                    m.unitlow.num <= addr_unit.num and \
-                                    m.unithigh.num >= addr_unit.num and \
-                                    m.unitlow.post <= addr_unit.post and \
-                                    m.unithigh.post >= addr_unit.post and \
+                                            m.unitlow.num <= addr_unit.num <= m.unithigh.num and \
+                                            m.unitlow.post <= addr_unit.post <= m.unithigh.post and \
                                     m.unitlow.pre == addr_unit.pre:
                         if m.unitlow.num == -1 and m.unitlow.post == '' and m.unitlow.pre == '':
-                            if addr_unit.full != -1 and m.unitlow.full <= addr_unit.full and m.unithigh.full >= addr_unit.full:
+                            if addr_unit.full != -1 and m.unitlow.full <= addr_unit.full <= m.unithigh.full:
                                 mlist2.append(m)
                         else:
                             mlist2.append(m)
@@ -417,7 +417,7 @@ def get_zip_info(address, input_):
                 # lets try this again without the unit_type
                 if len(mlist2) == 0:
                     for m in mlist:
-                        if m.unitlow.num <= addr_unit.num and m.unithigh.num >= addr_unit.num and m.unitlow.pre == addr_unit.pre:
+                        if m.unitlow.num <= addr_unit.num <= m.unithigh.num and m.unitlow.pre == addr_unit.pre:
                             mlist2.append(m)
                     if len(mlist2) == 1:
                         # Stay away from agressive unit changes
