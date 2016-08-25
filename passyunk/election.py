@@ -2,7 +2,6 @@ from __future__ import print_function
 
 import csv
 import os
-import re
 import sys
 
 __author__ = 'tom.swanson'
@@ -12,8 +11,9 @@ cwd += '/pdata'
 # use the cleanded up file
 blocksfile = 'election_block'
 
+
 def csv_path(file_name):
-    return os.path.join(cwd, file_name + '.csv').replace('\\','/')
+    return os.path.join(cwd, file_name + '.csv').replace('\\', '/')
 
 
 election_basename = {}
@@ -53,6 +53,7 @@ def test_election_file():
     path = csv_path(blocksfile)
     return os.path.isfile(path)
 
+
 def create_election_lookup():
     if not test_election_file():
         return False
@@ -62,21 +63,16 @@ def create_election_lookup():
     i = 0
     j = 0
     jbase = 0
-
+    p_name = ''
+    p_base = ''
     try:
         reader = csv.reader(f)
-        p_name = ''
-        c_name = ''
-        p_base = ''
-        c_base = ''
 
         for row in reader:
             if i == 0:
                 i += 1
                 continue
             r = Blocks(row)
-            if i == 0:
-                rp = r
             c_name = r.name
             c_base = r.base
 
@@ -93,7 +89,6 @@ def create_election_lookup():
                 jbase = i
 
             election_list.append(r)
-            rp = r
             p_name = c_name
             p_base = c_base
             i += 1
@@ -108,6 +103,7 @@ def create_election_lookup():
 
     f.close()
     return True
+
 
 def validate_election_basename():
     for r in election_basename:
@@ -141,10 +137,10 @@ def is_election_name(test):
     return election_list[name.low:name.high]
 
 
-def get_unique_zipcodes(list):
+def get_unique_zipcodes(lst):
     tmp = {}
     zips = []
-    for row in list:
+    for row in lst:
         tmp[row.zipcode] = row.zipcode
     # seems easier to just return a list than to deal with a dict - zips.values()[0]
     for r in tmp:
@@ -152,7 +148,7 @@ def get_unique_zipcodes(list):
     return zips
 
 
-def get_election_info(address, input_):
+def get_election_info(address):
     elist = is_election_base(address.street.full)
 
     if len(elist) > 0:
@@ -160,7 +156,6 @@ def get_election_info(address, input_):
         for row in elist:
             if row.low <= address.address.low_num <= row.high and (
                             address.address.parity == row.oeb or row.oeb == 'B'):
-
                 mlist.append(row)
 
         if len(mlist) == 0:

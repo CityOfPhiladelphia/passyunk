@@ -55,4 +55,7 @@ target/
 
 .DS_Store
 
+# pycharm
+.idea
+
 sandbox/

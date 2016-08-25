@@ -12,8 +12,9 @@ cwd += '/pdata'
 # use the cleanded up file
 zip4file = 'uspszip4'
 
+
 def csv_path(file_name):
-    return os.path.join(cwd, file_name + '.csv').replace('\\','/')
+    return os.path.join(cwd, file_name + '.csv').replace('\\', '/')
 
 
 zip4_basename = {}
@@ -120,9 +121,11 @@ def parse_unit_num(unitnum):
 
     return rt
 
+
 def test_zip4_file():
     path = csv_path(zip4file)
     return os.path.isfile(path)
+
 
 def create_zip4_lookup():
     if not test_zip4_file():
@@ -136,17 +139,13 @@ def create_zip4_lookup():
     try:
         reader = csv.reader(f)
         p_name = ''
-        c_name = ''
         p_base = ''
-        c_base = ''
 
         for row in reader:
             if i == 0:
                 i += 1
                 continue
             r = Zip4s(row)
-            if i == 0:
-                rp = r
             c_name = r.name
             c_base = r.base
 
@@ -163,7 +162,6 @@ def create_zip4_lookup():
                 jbase = i
 
             zip4_list.append(r)
-            rp = r
             p_name = c_name
             p_base = c_base
             i += 1
@@ -212,10 +210,10 @@ def is_zip4_name(test):
     return zip4_list[name.low:name.high]
 
 
-def get_unique_zipcodes(list):
+def get_unique_zipcodes(lst):
     tmp = {}
     zips = []
-    for row in list:
+    for row in lst:
         tmp[row.zipcode] = row.zipcode
     # seems easier to just return a list than to deal with a dict - zips.values()[0]
     for r in tmp:
@@ -257,7 +255,6 @@ def get_zip_info(address, input_):
 
             # this is likely a building with multiple zip4s
             if address.unit.unit_num == '' and addr_type == '':
-                mlist2 = []
                 recordtypedict = {}
                 for m in mlist:
                     if m.unit == '' and m.unitlow.full == '':
@@ -360,7 +357,7 @@ def get_zip_info(address, input_):
                         address.zipcode = zips[0]
                         address.zip4 = 'NMx'
                         return
-                    #print('Todo: 0 matches for address with unit num but no type ' + input_, file=sys.stderr)
+                        # print('Todo: 0 matches for address with unit num but no type ' + input_, file=sys.stderr)
 
                 if len(mlist2) > 1:
                     # might be able to get a good zipcode still
@@ -392,7 +389,7 @@ def get_zip_info(address, input_):
                     zips = get_unique_zipcodes(mlist)
                     if len(zips) == 1:
                         address.zipcode = zips[0]
-                    #print('multiple matches for address with unit type but no number ' + input_, file=sys.stderr)
+                    # print('multiple matches for address with unit type but no number ' + input_, file=sys.stderr)
                     return
 
             if address.unit.unit_num != '' and addr_type != '':
@@ -446,8 +443,8 @@ def get_zip_info(address, input_):
                             # need because of addrs like this - 3900 FORD ROAD UNIT PH
                             if address.unit.unit_type == address.unit.unit_num:
                                 address.unit.unit_num = ''
-                            #if suppress_msg == False:
-                                #print('Unit Change - ' + input_ + ' : ' + mlist2[0].unit, file=sys.stderr)
+                                # if suppress_msg == False:
+                                # print('Unit Change - ' + input_ + ' : ' + mlist2[0].unit, file=sys.stderr)
                             return
 
                     # might be able to get a good zipcode still
@@ -457,7 +454,7 @@ def get_zip_info(address, input_):
                         address.zip4 = 'NM'
                         return
 
-                    #print('Todo: 0 matches for address with unit type and  number ' + input_, file=sys.stderr)
+                        # print('Todo: 0 matches for address with unit type and  number ' + input_, file=sys.stderr)
 
                 if len(mlist2) > 1:
                     for m in mlist2:
@@ -478,10 +475,10 @@ def get_zip_info(address, input_):
                               file=sys.stderr)
                     return
 
-            #print('multiple: ' + input_, file=sys.stderr)
-            # else:
-            #     print('no zip: '+address.address.full+' '+address.street.full, file=sys.stderr)
+                    # print('multiple: ' + input_, file=sys.stderr)
+                    # else:
+                    #     print('no zip: '+address.address.full+' '+address.street.full, file=sys.stderr)
 
-            # zlist =is_zip4_name(address.street.full)
-            # if len(zlist) > 0:
-            #     print("ack", file=sys.stderr)
+                    # zlist =is_zip4_name(address.street.full)
+                    # if len(zlist) > 0:
+                    #     print("ack", file=sys.stderr)

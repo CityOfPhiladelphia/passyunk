@@ -8,7 +8,7 @@ CITYLIST = ['PHILADELPHIA', 'PHILA', 'PHILLY', 'PHILADELPHA', 'PHILADELPHIA', 'P
             'PHILADLPHIA']
 CARDINAL_DIR = ['N', 'E', 'S', 'W']
 PREPOSTDIR = ['INDEPENDENCE MALL', 'SCHUYLKILL AVE', 'WASHINGTON LN']
-POSTDIR = ['LOGAN CIR','PINE PL', 'ASHMEAD PL', 'MARWOOD RD']
+POSTDIR = ['LOGAN CIR', 'PINE PL', 'ASHMEAD PL', 'MARWOOD RD']
 PREDIR_AS_NAME = ['WEST END', 'EAST FALLS']
 SUFFIX_IN_NAME = ['SPRING GRDN', 'AUTUMN HL', 'CHESTNUT HL', 'COBBS CRK', 'DELAIRE LNDG', 'HICKORY HL', 'FAIR HL',
                   'HUNTING PARK', 'AYRDALE CRES']
@@ -28,10 +28,12 @@ SPECIAL_CHARS_ALLOWED = r' \-\\\t/&@,.#'
 # Add alphanumerics to special chars allowed, negate, and compile regex object.
 ILLEGAL_CHARS_RE = re.compile('[^A-Z0-9{}]'.format(SPECIAL_CHARS_ALLOWED))
 
+
 class Enum(set):
     def __getattr__(self, name):
         if name in self:
             return name
         raise AttributeError
+
 
 AddrType = Enum(['none', 'address', 'account', 'street', 'intersection_addr', 'block', 'place', 'pobox', 'zipcode'])

@@ -18,18 +18,18 @@ import os
 import re
 import sys
 
-
 from .centerline import create_cl_lookup, get_cl_info
 from .parser_data import STATELIST, CITYLIST, CARDINAL_DIR, PREPOSTDIR, POSTDIR, \
     PREDIR_AS_NAME, \
     SUFFIX_IN_NAME, opa_account_re, zipcode_re, po_box_re, AddrType, \
     ILLEGAL_CHARS_RE
-from .zip4 import create_zip4_lookup, get_zip_info, test_zip4_file
+from .zip4 import create_zip4_lookup, get_zip_info
 from .election import create_election_lookup, get_election_info
 
 is_cl_file = False
 is_election_file = False
 is_zip_file = False
+
 
 class Addrnum:
     def __init__(self):
@@ -90,10 +90,12 @@ class Unit:
         self.unit_num = ''
         self.unit_type = ''
 
+
 class Election:
     def __init__(self):
         self.blockid = ''
         self.precinct = ''
+
 
 class Nameswitch:
     def __init__(self, row):
@@ -244,41 +246,39 @@ def create_centerline_street_lookup():
     try:
         reader = csv.reader(f)
         previous = ''
-        current = ''
-        previousPreName = ''
-        currentPreName = ''
-        previousSuffix = ''
-        currentSuffix = ''
+        rp = ''
+        previous_pre_name = ''
+        previous_suffix = ''
         for row in reader:
             r = CenterlineName(row)
             if i == 0:
                 rp = r
             current = r.name
-            currentPreName = r.pre + ' ' + r.name
-            currentSuffix = r.name + ' ' + r.suffix
+            current_pre_name = r.pre + ' ' + r.name
+            current_suffix = r.name + ' ' + r.suffix
             if current != previous and i != 0:
                 ack = [previous, j, i]
                 r2 = CenterlineNameOnly(ack)
                 lookup_name[previous] = r2
                 j = i
-            if currentPreName != previousPreName and i != 0:
-                ack = [previousPreName, jpre, i]
+            if current_pre_name != previous_pre_name and i != 0:
+                ack = [previous_pre_name, jpre, i]
                 r2 = CenterlineNameOnly(ack)
                 if rp.pre != '':
-                    lookup_pre[previousPreName] = r2
+                    lookup_pre[previous_pre_name] = r2
                 jpre = i
-            if currentSuffix != previousSuffix and i != 0:
-                ack = [previousSuffix, jsuff, i]
+            if current_suffix != previous_suffix and i != 0:
+                ack = [previous_suffix, jsuff, i]
                 r2 = CenterlineNameOnly(ack)
                 if rp.suffix != '':
-                    lookup_suffix[previousSuffix] = r2
+                    lookup_suffix[previous_suffix] = r2
                 jsuff = i
             lookup_list.append(r)
             lookup[r.full] = r
             rp = r
             previous = current
-            previousPreName = currentPreName
-            previousSuffix = currentSuffix
+            previous_pre_name = current_pre_name
+            previous_suffix = current_suffix
             i += 1
 
     except IOError:
@@ -593,7 +593,8 @@ def create_full_names(address, addr_type):
             else:
                 temp = str(temp_num)
             # if address.address.addr_suffix != '' and address.address.fractional != '':
-            #     address.address.full = address.address.low + address.address.addr_suffix + '-' + temp + ' ' + address.address.fractional
+            #     address.address.full = address.address.low + address.address.addr_suffix + '-' + temp + ' ' +
+            # address.address.fractional
             # elif address.address.addr_suffix != '':
             #     address.address.full = address.address.low + address.address.addr_suffix + '-' + temp
             if address.address.fractional != '':
@@ -668,12 +669,11 @@ def handle_city_state_zip(tokens):
             raise ValueError('Unknown zip4 pattern: {}'.format(ziptest))
 
     tlen = len(tokens)
-    if tlen >3 and tokens[tlen - 1].isdigit() and tokens[tlen - 2].isdigit():
+    if tlen > 3 and tokens[tlen - 1].isdigit() and tokens[tlen - 2].isdigit():
         if 19000 < int(tokens[tlen - 2]) < 19300 and 1000 < int(tokens[tlen - 1]) < 9999:
             zipcode = tokens[tlen - 2]
             tokens.pop()
             tokens.pop()
-
 
     # Could be a 9 digit zip and zip4
     if opa_account_re.match(ziptest) is not None:
@@ -961,7 +961,7 @@ def is_addr(test, ver):
 
     tokens = re.findall(r"[^\W\d_-]+|\d+|-|#|/", test)
     tokenlen = len(tokens)
-    if tokenlen > 1 and tokens[-1].isalnum() == False:
+    if tokenlen > 1 and not tokens[-1].isalnum():
         tokens.pop()
         tokenlen = len(tokens)
 
@@ -1505,7 +1505,6 @@ def centerline_rematch(address):
                 address.is_centerline_match = True
                 return
 
-
     if address.predir != '' and address.postdir == '' and address.suffix == '':
         test = address.predir + ' ' + address.name
         centerline_name = is_centerline_street_pre(test)
@@ -1611,7 +1610,7 @@ def parse(item):
 
     name_switch(address)
 
-    if address_uber.type == AddrType.address and address_uber.components.street.is_centerline_match == False:
+    if address_uber.type == AddrType.address and not address_uber.components.street.is_centerline_match:
         centerline_rematch(address.street)
 
     if address_uber.type == AddrType.intersection_addr:
@@ -1631,14 +1630,13 @@ def parse(item):
     if address_uber.type == AddrType.address:
         # if the users doesn't have the zip4 file, parser will still work
 
-
         if is_zip_file:
             get_zip_info(address, address_uber.input_address)
             create_full_names(address, address_uber.type)
 
-        #important that full names are created before adding election
+        # important that full names are created before adding election
         if is_election_file:
-                get_election_info(address, address_uber.input_address)
+            get_election_info(address)
             # if test_cl_file:
             # get_cl_info(address, address_uber.input_address)
         if address_uber.components.unit.unit_type == '' and address_uber.components.unit.unit_num != '':
@@ -1664,7 +1662,6 @@ def parse(item):
         address_uber.components.street.is_centerline_match = True
     # else:
     #     temp_centerline = is_centerline_street_name(address_uber.components.street.name)
-
 
     temp_centerline = is_centerline_name(address_uber.components.street_2.full)
     if temp_centerline.full != '0':
@@ -1804,8 +1801,8 @@ def name_switch(address):
 def parse_addr_1(address, item):
     # Remove ES, WS, NS, SS
     item = re.sub(' (NS|SS|ES|WS)$', '', item)
-    item = item.replace('UNIT BLK','1')
-    item = item.replace(' OPP ',' ')
+    item = item.replace('UNIT BLK', '1')
+    item = item.replace(' OPP ', ' ')
     if item.startswith('OPP '):
         item = item[4:]
     tokens = item.split()
@@ -1844,10 +1841,10 @@ def parse_addr_1(address, item):
     if token_len > 1 and addrn.isaddr and len(tokens[1]) >= 3 and tokens[1][1] == '/':
         # there are 6 OPA addresses with the format 4080 1/2-82 LANCASTER AVE
         if token_len > 3 and tokens[1] == '1/2' and tokens[2][0] == '-':
-            addrn = is_addr(tokens[0] + '-' + tokens[2][1:] + ' 1/2', 0)
+            addrn = is_addr(str(tokens[0]) + '-' + str(tokens[2][1:]) + ' 1/2', 0)
             tokens = tokens[3:token_len]
         else:
-            addrn = is_addr(tokens[0] + ' ' + tokens[1], 0)
+            addrn = is_addr(str(tokens[0]) + ' ' + str(tokens[1]), 0)
             tokens = tokens[2:token_len]
 
     elif addrn.isaddr and token_len > 1:
@@ -2404,12 +2401,14 @@ apteLookup = createaptelookup()
 aptStdLookup = createaptstdlookup()
 add_ordinal_lookup = create_ordinal_lookup()
 name_switch_lookup = create_name_switch_lookup()
-street_centerline_lookup, street_centerline_name_lookup, cl_name_lookup, cl_pre_lookup, cl_suffix_lookup = create_centerline_street_lookup()
+street_centerline_lookup, street_centerline_name_lookup, cl_name_lookup, cl_pre_lookup, \
+cl_suffix_lookup = create_centerline_street_lookup()
 
 # if the users doesn't have the zip4 or centerline file, parser will still work
 is_zip_file = create_zip4_lookup()
 is_cl_file = create_cl_lookup()
 is_election_file = create_election_lookup()
+
 
 class PassyunkParser:
     def __init__(self, return_dict=True):

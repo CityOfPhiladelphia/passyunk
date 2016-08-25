@@ -13,7 +13,8 @@ cwd += '/pdata'
 # cwd = cwd.replace('\\','/')
 cl_file = 'centerline'
 
-#cfout = open(os.path.dirname(__file__)+'/sandbox/fuzzyout.csv', 'w')
+
+# cfout = open(os.path.dirname(__file__)+'/sandbox/fuzzyout.csv', 'w')
 # print(Levenshtein.ratio('BREAD', 'BROAD'))
 
 
@@ -21,13 +22,14 @@ def csv_path(file_name):
     return os.path.join(cwd, file_name + '.csv').replace('\\', '/')
 
 
-cl_basename = {}    # dict
-cl_list = []        # array
+cl_basename = {}  # dict
+cl_list = []  # array
 cl_name = {}
 cl_name_fw = []
 
-for x in range(0,26):
-  cl_name_fw.append([x])
+for x in range(0, 26):
+    cl_name_fw.append([x])
+
 
 class Centerline:
     def __init__(self, row):
@@ -54,8 +56,9 @@ class NameOnly:
         self.low = row[1]
         self.high = row[2]
 
+
 class NameFW:
-    def __init__(self, row):
+    def __init__(self):
         self.name = ''
 
 
@@ -73,13 +76,11 @@ def create_cl_lookup():
     i = 0
     j = 0
     jbase = 0
-
+    p_base = ''
     try:
         reader = csv.reader(f)
         p_name = ''
-        c_name = ''
         p_base = ''
-        c_base = ''
 
         for row in reader:
             if i == 0:
@@ -124,23 +125,23 @@ def create_cl_lookup():
 
 
 def create_cl_name_fw():
-    #cl_name.sort()
+    # cl_name.sort()
     for item in cl_name:
         if item == '':
             continue
         if len(item) <= 4:
             continue
         i = ord(item[0])
-        if i<65 or i >90:
+        if i < 65 or i > 90:
             continue
-        i = i-65
+        i -= 65
         try:
             cl_name_fw[i].append(item)
-        except:
-            print(i)
-            print(item)
+        except Exception:
+            print('Exception loading Centerline for fw ' + item + ' ' + str(i), sys.exc_info()[0])
+
     for item in cl_name_fw:
-        #print(item[0],len(item))
+        # print(item[0],len(item))
         item.pop(0)
         item.sort()
     return
@@ -199,14 +200,14 @@ def is_cl_name(test):
 
 
 def get_cl_info(address, input_):
-    cl_list = is_cl_base(address.street.full)
+    cl_list_m = is_cl_base(address.street.full)
 
-    if len(cl_list) > 0:
+    if len(cl_list_m) > 0:
         mlist = []
         number_distance = 1000000
         addr_near = 0
         number_distance_rec = {}
-        for row in cl_list:
+        for row in cl_list_m:
             if row.from_left <= address.address.low_num <= row.to_left and row.oeb_left == address.address.parity:
                 mlist.append(row)
             elif row.from_right <= address.address.low_num <= row.to_right and row.oeb_right == address.address.parity:
@@ -258,11 +259,11 @@ def get_cl_info(address, input_):
             # address.cl_addr_match = str(len(mlist))
             return
 
-    cl_list = is_cl_name(address.street.name)
+    cl_list_m = is_cl_name(address.street.name)
 
-    if len(cl_list) > 0:
+    if len(cl_list_m) > 0:
         mlist = []
-        for row in cl_list:
+        for row in cl_list_m:
             if row.from_left <= address.address.low_num <= row.to_left and row.oeb_left == address.address.parity:
                 if (address.street.predir != '' and address.street.predir == row.pre) or (
                                 address.street.predir == '' and row.pre == '') or (
@@ -319,32 +320,32 @@ def get_cl_info(address, input_):
             address.cl_addr_match = 'MULTI'  # str(len(mlist))
             return
 
-    if len(address.street.name) > 3  and address.street.name.isalpha():
+    if len(address.street.name) > 3 and address.street.name.isalpha():
         # no CL match yet, try fuzzy
         i = ord(address.street.name[0])
         if i < 65 or i > 90:
-            print('Invalid street name for fuzzy match: '+address.street.name)
-        i = i - 65
+            print('Invalid street name for fuzzy match: ' + address.street.name)
+        i -= 65
 
-        #match scores of 90 are very suspect using this method
+        # match scores of 90 are very suspect using this method
         options = process.extract(address.street.name, cl_name_fw[i], limit=2)
 
-        tie = 'N'
-        #print(input_)
-        #print(options)
+        tie = ''
+        # print(input_)
+        # print(options)
         if len(options) > 0 and options[0][0][0] == address.street.name[0] and len(address.street.name) > 3 and \
                         int(options[0][1]) >= 91 and abs(len(address.street.name) - len(options[0][0])) <= 4:
-            if len(options) >1 and options[0][1] == options[1][1]:
+            if len(options) > 1 and options[0][1] == options[1][1]:
                 tie_print = input_ + ',' + address.street.name + ',' + options[0][0] + ',' + str(
-                    options[0][1])+ ',' + options[1][0] + ',' + str(
+                    options[0][1]) + ',' + options[1][0] + ',' + str(
                     options[1][1])
-                print(tie_print)
+                # print(tie_print)
                 tie = 'Y'
-            #out = input_ + ',' + address.street.name + ',' + options[0][0] + ',' + str(options[0][1])+ ',' + tie+'\n'
-            #cfout.write(out)
-            #cfout.flush()
+            # out = input_ + ',' + address.street.name + ',' + options[0][0] + ',' + str(options[0][1])+ ',' + tie+'\n'
+            # cfout.write(out)
+            # cfout.flush()
             address.street.name = options[0][0]
-            address.street.score = str(options[0][1])
+            address.street.score = tie + str(options[0][1])
 
             get_cl_info(address, input_)
             return
