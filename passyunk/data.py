@@ -1,3 +1,5 @@
+import os
+
 # dict to standardize predirs/postdirs
 DIRS_STD = {
     'N':        'N',
@@ -15,7 +17,7 @@ DIRS_STD = {
 # dict to standardize suffixes
 SUFFIXES_STD = {}
 
-with open('./pdata/suffix.csv') as f:
+with open(os.path.join(os.path.dirname(__file__), 'pdata/suffix.csv')) as f:
     for line in f.readlines():
         cols = line.split(',')
         common = cols[1]
