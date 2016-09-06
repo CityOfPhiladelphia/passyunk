@@ -23,7 +23,7 @@ opa_account_re = re.compile('^(\d{9})?$')
 po_box_re = re.compile('^P(\.|OST)? ?O(\.|FFICE)? ?BOX (?P<num>\w+)$')
 
 # These are all the special characters that are allowed in input addresses.
-# A few chars have to be escape for regex purposes: - ^ ] \
+# A few chars have to be escaped for regex purposes: - ^ ] \
 SPECIAL_CHARS_ALLOWED = r' \-\\\t/&@,.#'
 # Add alphanumerics to special chars allowed, negate, and compile regex object.
 ILLEGAL_CHARS_RE = re.compile('[^A-Z0-9{}]'.format(SPECIAL_CHARS_ALLOWED))
