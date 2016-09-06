@@ -19,7 +19,7 @@ import re
 import sys
 
 from .centerline import create_cl_lookup, get_cl_info
-from .parser_data import STATELIST, CITYLIST, CARDINAL_DIR, PREPOSTDIR, POSTDIR, \
+from .data import STATELIST, CITYLIST, CARDINAL_DIR, PREPOSTDIR, POSTDIR, \
     PREDIR_AS_NAME, \
     SUFFIX_IN_NAME, opa_account_re, zipcode_re, po_box_re, AddrType, \
     ILLEGAL_CHARS_RE
