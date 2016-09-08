@@ -49,6 +49,15 @@ class Centerline:
         self.oeb_right = oeb(self.from_right, self.to_right)
         self.oeb_left = oeb(self.from_left, self.to_left)
 
+    def __str__(self):
+        return 'Centerline: {}-{} {}'.format(
+            min(self.from_left, self.from_right),
+            max(self.to_left, self.to_right),
+            self.base
+        )
+
+    def __repr__(self):
+        return self.__str__()
 
 class NameOnly:
     def __init__(self, row):
@@ -200,71 +209,96 @@ def is_cl_name(test):
 
 
 def get_cl_info(address, input_):
-    cl_list_m = is_cl_base(address.street.full)
+    addr_low_num = address.address.low_num
+    addr_parity = address.address.parity
 
-    if len(cl_list_m) > 0:
-        mlist = []
-        number_distance = 1000000
-        addr_near = 0
-        number_distance_rec = {}
-        for row in cl_list_m:
-            if row.from_left <= address.address.low_num <= row.to_left and row.oeb_left == address.address.parity:
-                mlist.append(row)
-            elif row.from_right <= address.address.low_num <= row.to_right and row.oeb_right == address.address.parity:
-                mlist.append(row)
+    # Get matching centerlines based on street name
+    centerlines = is_cl_base(address.street.full)
+
+    # If there are matches
+    if len(centerlines) > 0:
+        matches = []
+        cur_closest = None
+        cur_closest_offset = None
+        cur_closest_addr = 0
+
+        # Loop over matches
+        for cl in centerlines:
+            from_left = cl.from_left
+            from_right = cl.from_right
+            to_left = cl.to_left
+            to_right = cl.to_right
+
+            # Try to match on the left
+            if from_left <= addr_low_num <= to_left and \
+                cl.oeb_left == addr_parity:
+                matches.append(cl)
+            # Try to match on the right
+            elif from_right <= addr_low_num <= to_right and \
+                cl.oeb_right == addr_parity:
+                matches.append(cl)
+            # If no matches, find the one with the nearest address range
             else:
-                if row.from_left != 0 and abs(row.from_left - address.address.low_num) < number_distance:
-                    number_distance = abs(row.from_left - address.address.low_num)
-                    number_distance_rec = row
-                    addr_near = row.from_left
-                if row.from_left != 0 and abs(row.from_right - address.address.low_num) < number_distance:
-                    number_distance = abs(row.from_right - address.address.low_num)
-                    number_distance_rec = row
-                    addr_near = row.from_right
-                if row.from_left != 0 and abs(address.address.low_num - row.to_left) < number_distance:
-                    number_distance = abs(address.address.low_num - row.to_left)
-                    number_distance_rec = row
-                    addr_near = row.to_left
-                if row.from_left != 0 and abs(address.address.low_num - row.to_right) < number_distance:
-                    number_distance = abs(address.address.low_num - row.to_right)
-                    number_distance_rec = row
-                    addr_near = row.to_right
+                if from_left == 0:
+                    continue
 
-        # good street name but no matching address range
-        if len(mlist) == 0 and number_distance != 1000000:
-            address.st_code = number_distance_rec.st_code
-            address.seg_id = number_distance_rec.seg_id
-            address.responsibility = number_distance_rec.responsibility
-            address.cl_addr_match = 'RANGE:' + str(number_distance)
-            address.address.full = str(addr_near)
-            return
+                # Loop over addresses in range to find the min
+                if cur_closest is None or \
+                    abs(from_left - addr_low_num) < cur_closest_offset:
+                    cur_closest_offset = abs(from_left - addr_low_num)
+                    cur_closest = cl
+                    cur_closest_addr = from_left
+                if abs(from_right - addr_low_num) < cur_closest_offset:
+                    cur_closest_offset = abs(from_right - addr_low_num)
+                    cur_closest = cl
+                    cur_closest_addr = from_right
+                if abs(addr_low_num - to_left) < cur_closest_offset:
+                    cur_closest_offset = abs(addr_low_num - to_left)
+                    cur_closest = cl
+                    cur_closest_addr = to_left
+                if abs(addr_low_num - to_right) < cur_closest_offset:
+                    cur_closest_offset = abs(addr_low_num - to_right)
+                    cur_closest = cl
+                    cur_closest_addr = to_right
 
-        if len(mlist) == 0:
+        if len(matches) == 0:
+            # good street name but no matching address range
+            if cur_closest_offset is not None:
+                address.st_code = cur_closest.st_code
+                address.seg_id = cur_closest.seg_id
+                address.responsibility = cur_closest.responsibility
+                address.cl_addr_match = 'RANGE:' + str(cur_closest_offset)
+                address.address.full = str(cur_closest_addr)
+                return
+
             address.st_code = row.st_code
             address.cl_addr_match = 'MATCH TO STREET WITH NO ADDR RANGE'
             return
 
         # Exact Match
-        if len(mlist) == 1:
-            address.st_code = mlist[0].st_code
-            address.seg_id = mlist[0].seg_id
-            address.responsibility = mlist[0].responsibility
+        if len(matches) == 1:
+            match = matches[0]
+            address.st_code = match.st_code
+            address.seg_id = match.seg_id
+            address.responsibility = match.responsibility
             address.cl_addr_match = 'A'
             return
 
         # Exact Street match, multiple range matches, return the count of matches
-        if len(mlist) > 1:
+        if len(matches) > 1:
             address.st_code = row.st_code
             address.cl_addr_match = 'AM'
-            # address.cl_addr_match = str(len(mlist))
+            # address.cl_addr_match = str(len(matches))
             return
 
-    cl_list_m = is_cl_name(address.street.name)
+    # If we didn't find a match using the street base (e.g. N 10TH ST), try
+    # using the street name (10TH).
+    centerlines = is_cl_name(address.street.name)
 
-    if len(cl_list_m) > 0:
-        mlist = []
-        for row in cl_list_m:
-            if row.from_left <= address.address.low_num <= row.to_left and row.oeb_left == address.address.parity:
+    if len(centerlines) > 0:
+        matches = []
+        for row in centerlines:
+            if row.from_left <= addr_low_num <= row.to_left and row.oeb_left == addr_parity:
                 if (address.street.predir != '' and address.street.predir == row.pre) or (
                                 address.street.predir == '' and row.pre == '') or (
                                 address.street.predir == '' and row.pre != '') or (
@@ -277,8 +311,8 @@ def get_cl_info(address, input_):
                                         address.street.suffix == '' and row.suffix == '') or (
                                         address.street.suffix == '' and row.suffix != '') or (
                                         address.street.suffix != '' and row.suffix == ''):
-                            mlist.append(row)
-            elif row.from_right <= address.address.low_num <= row.to_right and row.oeb_right == address.address.parity:
+                            matches.append(row)
+            elif row.from_right <= addr_low_num <= row.to_right and row.oeb_right == addr_parity:
                 if (address.street.predir != '' and address.street.predir == row.pre) or (
                                 address.street.predir == '' and row.pre == '') or (
                                 address.street.predir == '' and row.pre != '') or (
@@ -291,33 +325,36 @@ def get_cl_info(address, input_):
                                         address.street.suffix == '' and row.suffix == '') or (
                                         address.street.suffix == '' and row.suffix != '') or (
                                         address.street.suffix != '' and row.suffix == ''):
-                            mlist.append(row)
+                            matches.append(row)
 
         # good street name but no matching address range
-        if len(mlist) == 0:
+        if len(matches) == 0:
             address.cl_addr_match = 'S2'
             return
 
-        if len(mlist) == 1:
-            match = 'B'
-            if address.street.predir != mlist[0].pre:
-                match += ' Pre'
-                address.street.predir = mlist[0].pre
-            if address.street.postdir != mlist[0].post:
-                match += ' Post'
-                address.street.postdir = mlist[0].post
-            if address.street.suffix != mlist[0].suffix:
-                match += ' Suffix'
-                address.street.suffix = mlist[0].suffix
-            address.st_code = mlist[0].st_code
-            address.seg_id = mlist[0].seg_id
-            address.responsibility = mlist[0].responsibility
-            address.cl_addr_match = match
+        if len(matches) == 1:
+            match = matches[0]
+            match_type = 'B'
+
+            if address.street.predir != match.pre:
+                match_type += ' Pre'
+                address.street.predir = match.pre
+            if address.street.postdir != match.post:
+                match_type += ' Post'
+                address.street.postdir = match.post
+            if address.street.suffix != match.suffix:
+                match_type += ' Suffix'
+                address.street.suffix = match.suffix
+            address.st_code = match.st_code
+            address.seg_id = match.seg_id
+            address.responsibility = match.responsibility
+            address.cl_addr_match = match_type
             return
+
         # need to resolve dir and/or suffix
-        if len(mlist) > 1:
+        if len(matches) > 1:
             address.st_code = row.st_code
-            address.cl_addr_match = 'MULTI'  # str(len(mlist))
+            address.cl_addr_match = 'MULTI'  # str(len(matches))
             return
 
     if len(address.street.name) > 3 and address.street.name.isalpha():
