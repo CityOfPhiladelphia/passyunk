@@ -1,6 +1,32 @@
+import os
 import re
 
 __author__ = 'tom.swanson'
+
+# dict to standardize predirs/postdirs
+DIRS_STD = {
+    'N':        'N',
+    'NO':       'N',
+    'NORTH':    'N',
+    'S':        'S',
+    'SO':       'S',
+    'SOUTH':    'S',
+    'E':        'E',
+    'EAST':     'E',
+    'W':        'W',
+    'WEST':     'W'
+}
+
+# dict to standardize suffixes
+SUFFIXES_STD = {}
+
+with open(os.path.join(os.path.dirname(__file__), 'pdata/suffix.csv')) as f:
+    for line in f.readlines():
+        cols = line.split(',')
+        common = cols[1]
+        std = cols[2]
+        SUFFIXES_STD[common] = std
+
 aptfloor = ['FL', 'FLR', 'FLOOR']
 CONJUNCTIONS = ['AND', '@', '\\', 'AT', '&']
 STATELIST = ['PA', 'PENNSYLVANIA']
@@ -23,7 +49,7 @@ opa_account_re = re.compile('^(\d{9})?$')
 po_box_re = re.compile('^P(\.|OST)? ?O(\.|FFICE)? ?BOX (?P<num>\w+)$')
 
 # These are all the special characters that are allowed in input addresses.
-# A few chars have to be escape for regex purposes: - ^ ] \
+# A few chars have to be escaped for regex purposes: - ^ ] \
 SPECIAL_CHARS_ALLOWED = r' \-\\\t/&@,.#'
 # Add alphanumerics to special chars allowed, negate, and compile regex object.
 ILLEGAL_CHARS_RE = re.compile('[^A-Z0-9{}]'.format(SPECIAL_CHARS_ALLOWED))

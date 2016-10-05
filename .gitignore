@@ -58,4 +58,5 @@ target/
 # pycharm
 .idea
 
+venv/
 sandbox/

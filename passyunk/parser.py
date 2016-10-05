@@ -17,9 +17,10 @@ import csv
 import os
 import re
 import sys
+import warnings
 
 from .centerline import create_cl_lookup, get_cl_info
-from .parser_data import STATELIST, CITYLIST, CARDINAL_DIR, PREPOSTDIR, POSTDIR, \
+from .data import STATELIST, CITYLIST, CARDINAL_DIR, PREPOSTDIR, POSTDIR, \
     PREDIR_AS_NAME, \
     SUFFIX_IN_NAME, opa_account_re, zipcode_re, po_box_re, AddrType, \
     ILLEGAL_CHARS_RE
@@ -2406,8 +2407,14 @@ cl_suffix_lookup = create_centerline_street_lookup()
 
 # if the users doesn't have the zip4 or centerline file, parser will still work
 is_zip_file = create_zip4_lookup()
+if not is_zip_file:
+    warnings.warn('USPS file not found.')
 is_cl_file = create_cl_lookup()
+if not is_cl_file:
+    warnings.warn('Centerline file not found.')
 is_election_file = create_election_lookup()
+if not is_election_file:
+    warnings.warn('Election file not found.')
 
 
 class PassyunkParser:
