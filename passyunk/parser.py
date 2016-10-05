@@ -85,6 +85,11 @@ class Address:
         self.responsibility = ''
         self.cl_addr_match = ''
 
+    def __str__(self):
+        return 'Address: {}'.format(self.street_address)
+
+    def __repr__(self):
+        return self.__str__()
 
 class Unit:
     def __init__(self):
