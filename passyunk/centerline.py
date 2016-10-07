@@ -271,7 +271,7 @@ def get_cl_info(address, input_):
                 address.address.full = str(cur_closest_addr)
                 return
 
-            address.st_code = row.st_code
+            address.st_code = cl.st_code
             address.cl_addr_match = 'MATCH TO STREET WITH NO ADDR RANGE'
             return
 
@@ -286,7 +286,7 @@ def get_cl_info(address, input_):
 
         # Exact Street match, multiple range matches, return the count of matches
         if len(matches) > 1:
-            address.st_code = row.st_code
+            address.st_code = cl.st_code
             address.cl_addr_match = 'AM'
             # address.cl_addr_match = str(len(matches))
             return
