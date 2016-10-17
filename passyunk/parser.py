@@ -613,8 +613,10 @@ def create_full_names(address, addr_type):
                 address.address.full = address.address.low + '-' + \
                                        address.address.high + ' ' + \
                                        address.address.fractional
-            else:
+            elif address.address.low != '' and address.address.high != '':
                 address.address.full = address.address.low + '-' + address.address.high
+            else:
+                address.address.full = ''
     # if you have an address number, use it even if it is and intersections
     if address.address.isaddr:
         address.base_address = address.address.full + ' ' + address.street.full
@@ -650,6 +652,10 @@ def handle_city_state_zip(tokens):
     tlen = len(tokens)
 
     if tokens[tlen - 1] == 'USA':
+        tokens.pop()
+
+    if tlen > 2 and tokens[tlen - 2] == 'UNITED' and tokens[tlen - 1] == 'STATES':
+        tokens.pop()
         tokens.pop()
 
     zipcode = ''
@@ -902,6 +908,13 @@ def handle_units(tokens, unit):
         if apt.correct != '' and tempsuffix1.std != '0':
             return [tlen - 1, apt.correct]
 
+    #2024 ORTHODOX REAR
+    if tlen == 2:
+        apt = is_apte(tokens[tlen - 1])
+        dir = is_dir(tokens[0])
+        if apt.correct != '' and dir.std == '0' :
+            return [tlen - 1, apt.correct]
+
     return [-1, '']
 
 
@@ -955,8 +968,13 @@ def is_addr(test, ver):
     """
 
     """
+    if test == '':
+        return
+
     if test[0:2] != '0-':
         test = test.lstrip('0')
+        if test == '':
+            test = '0'
     half = False
 
     if len(test) > 2 and test[-3:] == '1/2':
@@ -1080,7 +1098,7 @@ def is_addr(test, ver):
             ilow += hundred
             ihigh_full += hundred
 
-        if len(tokens[0]) == 2 and len(tokens[2]) == 1:
+        if len(tokens[0]) == 2 and len(tokens[3]) == 1:
             tens = (int(tokens[0][0:-1])) * 10
             ihigh_full += tens
 
@@ -1632,8 +1650,7 @@ def parse(item):
     # if the users doesn't have the centerline file, parser will still work
     if is_cl_file:
         get_cl_info(address, address_uber.input_address)
-        create_full_names(address, address_uber.type)
-    if address_uber.type == AddrType.address:
+
         # if the users doesn't have the zip4 file, parser will still work
 
         if is_zip_file:
@@ -1647,6 +1664,9 @@ def parse(item):
             # get_cl_info(address, address_uber.input_address)
         if address_uber.components.unit.unit_type == '' and address_uber.components.unit.unit_num != '':
             address_uber.components.unit.unit_type = '#'
+
+    if len(address.zip4) == 4 and address.zip4[2:4] == 'ND':
+        address.zip4 = ''
 
     if address_uber.type == AddrType.intersection and address.base_address.find(' & ') == -1:
         address_uber.type = AddrType.address
@@ -1748,6 +1768,13 @@ def parse(item):
     if address_uber.components.election.precinct == '':
         address_uber.components.election.precinct = None
 
+    # since there aren't set values that are valid for these fields, long strings of junk valuse can come through
+    # 6252 N. 4TH ST. 19120DFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFBBBBBBB B
+    if address_uber.components.unit.unit_num != -1 and len(address_uber.components.unit.unit_num) > 12:
+        address_uber.components.unit.unit_num = address_uber.components.unit.unit_num[:12]
+    if len(address_uber.components.unit.unit_type) > 12:
+        address_uber.components.unit.unit_num = address_uber.components.unit.unit_type[:12]
+
     if address_uber.components.unit.unit_num == '':
         address_uber.components.unit.unit_num = None
     if address_uber.components.unit.unit_num == -1:
@@ -1760,6 +1787,8 @@ def parse(item):
         address_uber.components.street_address = None
     if address_uber.type == '':
         address_uber.type = None
+
+
 
     return address_uber
 
@@ -1788,9 +1817,64 @@ def input_cleanup(address_uber, item):
     item = item.replace('/', ' AND ')
     item = item.replace('@', ' AND ')
     item = item.replace(' AT ', ' AND ')
+    item = item.replace(' UNIT UNIT', ' UNIT ')  #yes this is common
     item = item.replace('1 AND 2', ' 1/2 ')
+
+
+
+
     item = ' '.join(item.split())
+
     return item
+
+
+def split_lead_numbers_from_alpha_string(item):
+    tokens = item.split()
+    if len(tokens) == 0:
+        return tokens
+    if len(tokens) == 1 and len(tokens[0])<4:
+        return tokens
+
+    pre_dir = is_dir(tokens[0])
+
+    #northeast ave
+    suffix = issuffix('')
+    if len(tokens) > 1:
+        suffix = issuffix(tokens[1])
+    #this line has to sync with the same one below
+    if len(tokens) >= 1 and pre_dir.std != '0' and suffix.std == '0':
+        del tokens[0]
+
+    lead_string = ''
+    trail_string = ''
+    alpha = False
+    if len(tokens) == 0:
+        if pre_dir.std != 0 and suffix.std == '0':
+            tokens.insert(0, pre_dir.full)
+            return tokens
+        if pre_dir.std == 0 and suffix.std != '0':
+            tokens.insert(0, suffix.full)
+            return tokens
+        if pre_dir.std != 0 and suffix.std != '0':
+            tokens.insert(0, pre_dir.correct)
+            tokens.insert(0, suffix.full)
+            return tokens
+    #is the leading token start with a num and end with a char, making sure to not confuse numberic streets and address with suffix chars
+    if (len(tokens) > 1 or len(tokens[0]) > 7) and tokens[0].isalnum() and tokens[0][0].isdigit() and tokens[0][len(tokens[0]) - 1].isalpha():
+
+        for c in tokens[0]:
+            if alpha or c.isalpha():
+                alpha = True
+                trail_string += c
+            else:
+                lead_string += c
+
+        if len(lead_string) > 2 and len(trail_string) > 3 or (len(trail_string) > 4):
+            tokens.insert(0, lead_string)
+            tokens[1] = trail_string
+    if len(tokens) >= 1 and pre_dir.std != '0' and suffix.std == '0':
+        tokens.insert(0, pre_dir.correct)
+    return tokens
 
 
 def name_switch(address):
@@ -1811,7 +1895,9 @@ def parse_addr_1(address, item):
     item = item.replace(' OPP ', ' ')
     if item.startswith('OPP '):
         item = item[4:]
-    tokens = item.split()
+    #tokens = item.split()
+
+    tokens = split_lead_numbers_from_alpha_string(item)
 
     # This is just for speed, check for clean address match, handle, and return
     if len(tokens) > 1 and tokens[0].isdigit():
@@ -1879,18 +1965,39 @@ def parse_addr_1(address, item):
 
     # intial attempt at getting R or Rear at the front of the address and treat it as REAR unit
     if token_len > 2 and (tokens[0] == 'R' or tokens[0] == 'REAR'):
-        pre_dir = is_dir(tokens[1])
-        if pre_dir.std != '0':
-            tokens.remove(tokens[0])
-            address.unit.unit_type = 'REAR'
+        #pre_dir = is_dir(tokens[1])
+        #if pre_dir.std != '0':
+        tokens.remove(tokens[0])
+        address.unit.unit_type = 'REAR'
+
+    # not sure why but this is a common format - 3483 UNIT E THOMPSON
+    if token_len > 2 and tokens[0] == 'UNIT' or (token_len == 2 and len(tokens[1]) > 3 and tokens[0] == 'UNIT'):
+        tokens.remove(tokens[0])
+
 
     units = handle_units(tokens, address.unit)
 
     if units[0] != -1 and address.unit.unit_type == '':
         tokens = unitdesigantor_second_pass(address, units, tokens)
 
+    # there isn't a street name, this is junk but put the unit back in the street name
+    if len(tokens) == 0 and (address.unit.unit_num != '' or address.unit.unit_type != ''):
+        address.street.name = '{} {}'.format(address.unit.unit_type,address.unit.unit_num)
+        address.unit.unit_type = ''
+        address.unit.unit_num = ''
+        return address
+
+
+    # do this again now that addr num is removed
+    tokens = split_lead_numbers_from_alpha_string(' '.join(tokens))
+
+    if tokens is None:
+        return address
+
     # Fix for addresses like this - 90 E JOHNSON ST # 2ND FL R #32
     # 1608 South St # <- should be handled in cleanup
+
+
     i = 0
     for t in tokens:
         i += 1
@@ -1913,6 +2020,8 @@ def parse_addr_1(address, item):
         address.street.name = ' '.join(name_std(tokens, False))
         address.street.parse_method = 'A1'
         return address
+
+
 
     tokens = handle_st(tokens)
     tokens = handle_mt(tokens)
@@ -2295,10 +2404,10 @@ def parse_addr_1(address, item):
             address.street.name = ' '.join(name_std(tokens[0:1], True))
             address.street.suffix = suffix_minus_one.correct
             address.street.postdir = ''
-            apt_std = is_apt_std(tokens[token_len - 1])
-            if apt_std:
-                address.unit.unit_num = apt_std
-                address.unit.unit_type = '#'
+            apte_std = is_apte(tokens[token_len - 1])
+            if apte_std.correct != '':
+                address.unit.unit_type = apte_std
+                #address.unit.unit_type = '#'
                 address.street.parse_method = '3bNSU'
             else:
                 address.street.parse_method = '3bNSJ'
@@ -2356,6 +2465,7 @@ def parse_addr_1(address, item):
 
 
 def unitdesigantor_second_pass(address, apt, tokens):
+
     address.unit.unit_type = apt[1]
     tokens = tokens[0:apt[0]]
     aptsplit = address.unit.unit_type.split(' ')

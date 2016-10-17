@@ -17,6 +17,14 @@ DIRS_STD = {
     'WEST':     'W'
 }
 
+STREET_NAME_STD_EXCEPTION = {
+    'ANDREW AVE':        'ANDREWS AVE',
+    'MEETING HOUSE DR':       'MEETINGHOUSE DR',
+    'ALLENS ST': 'ALLEN ST',
+    'N PHILIPS ST': 'N PHILIP ST',
+    'S PHILIPS ST': 'S PHILIP ST'
+
+}
 # dict to standardize suffixes
 SUFFIXES_STD = {}
 
@@ -40,6 +48,8 @@ SUFFIX_IN_NAME = ['SPRING GRDN', 'AUTUMN HL', 'CHESTNUT HL', 'COBBS CRK', 'DELAI
                   'HUNTING PARK', 'AYRDALE CRES']
 APTSPECIAL_2TOKEN = ['2ND FL', '1ST FL', '2ND', '1ST', 'PINE PL', 'SCHUYLKILL AVE']
 APTSPECIAL_1TOKEN = ['2ND', '1ST', '2R', '1R', '01FL', '02FL', '03FL']
+
+
 
 zipcode_re = re.compile('^(\d{5}(\-\d{4})?)?$')
 
