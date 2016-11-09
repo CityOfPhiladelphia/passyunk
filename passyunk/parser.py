@@ -54,6 +54,7 @@ class Street:
         self.name = ''
         self.suffix = ''
         self.postdir = ''
+        self.street_code = ''
         self.parse_method = ''
         self.is_centerline_match = False
         self.score = None
@@ -73,16 +74,15 @@ class Address:
         self.address = Addrnum()
         self.street = Street()
         self.street_2 = Street()
-        self.unit = Unit()
+        self.address_unit = Unit()
+        self.usps = Usps()
         self.election = Election()
-        self.zipcode = ''
-        self.zip4 = ''
-        self.uspstype = ''
-        self.bldgfirm = ''
+        #self.zipcode = ''
+        #self.usps.zip4 = ''
         self.matchdesc = ''
-        self.st_code = ''
-        self.seg_id = ''
-        self.responsibility = ''
+        #self.street_code = ''
+        self.cl_seg_id = ''
+        self.cl_responsibility = ''
         self.cl_addr_match = ''
 
     def __str__(self):
@@ -102,6 +102,12 @@ class Election:
         self.blockid = ''
         self.precinct = ''
 
+class Usps:
+    def __init__(self):
+        self.zipcode = ''
+        self.zip4 = ''
+        self.bldgfirm = ''
+        self.uspstype = ''
 
 class Nameswitch:
     def __init__(self, row):
@@ -1642,7 +1648,7 @@ def parse(item):
         centerline_rematch(address.street_2)
 
     # TODO: seg_id need to move into street and street2
-    if address_uber.components.seg_id != '':
+    if address_uber.components.cl_seg_id != '':
         address_uber.components.street.is_centerline_match = True
 
     create_full_names(address, address_uber.type)
@@ -1662,24 +1668,24 @@ def parse(item):
             get_election_info(address)
             # if test_cl_file:
             # get_cl_info(address, address_uber.input_address)
-        if address_uber.components.unit.unit_type == '' and address_uber.components.unit.unit_num != '':
-            address_uber.components.unit.unit_type = '#'
+        if address_uber.components.address_unit.unit_type == '' and address_uber.components.address_unit.unit_num != '':
+            address_uber.components.address_unit.unit_type = '#'
 
-    if len(address.zip4) == 4 and address.zip4[2:4] == 'ND':
-        address.zip4 = ''
+    if len(address.usps.zip4) == 4 and address.usps.zip4[2:4] == 'ND':
+        address.usps.zip4 = ''
 
     if address_uber.type == AddrType.intersection and address.base_address.find(' & ') == -1:
         address_uber.type = AddrType.address
     if address_uber.type == AddrType.intersection:
         address_uber.components.street_address = address.base_address
     elif address_uber.type != AddrType.account:
-        if address.unit.unit_num != -1:
+        if address.address_unit.unit_num != -1:
             address_uber.components.street_address = address.base_address + ' ' + \
-                                                     address.unit.unit_type + ' ' + \
-                                                     address.unit.unit_num
+                                                     address.address_unit.unit_type + ' ' + \
+                                                     address.address_unit.unit_num
         else:
             address_uber.components.street_address = address.base_address + ' ' + \
-                                                     address.unit.unit_type + ' '
+                                                     address.address_unit.unit_type + ' '
 
         address_uber.components.street_address = ' '.join(address_uber.components.street_address.split())
 
@@ -1695,24 +1701,24 @@ def parse(item):
 
     if address_uber.components.base_address == '':
         address_uber.components.base_address = None
-    if address_uber.components.zipcode == '':
-        address_uber.components.zipcode = None
-    if address_uber.components.zip4 == '':
-        address_uber.components.zip4 = None
-    if address_uber.components.uspstype == '':
-        address_uber.components.uspstype = None
-    if address_uber.components.bldgfirm == '':
-        address_uber.components.bldgfirm = None
+    if address_uber.components.usps.zipcode == '':
+        address_uber.components.usps.zipcode = None
+    if address_uber.components.usps.zip4 == '':
+        address_uber.components.usps.zip4 = None
+    if address_uber.components.usps.uspstype == '':
+        address_uber.components.usps.uspstype = None
+    if address_uber.components.usps.bldgfirm == '':
+        address_uber.components.usps.bldgfirm = None
     if address_uber.components.cl_addr_match == '':
         address_uber.components.cl_addr_match = None
     if address_uber.components.matchdesc == '':
         address_uber.components.matchdesc = None
-    if address_uber.components.responsibility == '':
-        address_uber.components.responsibility = None
-    if address_uber.components.seg_id == '':
-        address_uber.components.seg_id = None
-    if address_uber.components.st_code == '':
-        address_uber.components.st_code = None
+    if address_uber.components.cl_responsibility == '':
+        address_uber.components.cl_responsibility = None
+    if address_uber.components.cl_seg_id == '':
+        address_uber.components.cl_seg_id = None
+    if address_uber.components.street.street_code == '':
+        address_uber.components.street.street_code = None
 
     if address_uber.components.address.addr_suffix == '':
         address_uber.components.address.addr_suffix = None
@@ -1762,7 +1768,9 @@ def parse(item):
         address_uber.components.street_2.predir = None
     if address_uber.components.street_2.postdir == '':
         address_uber.components.street_2.postdir = None
-
+    if address_uber.components.street_2.street_code == '':
+        address_uber.components.street_2.street_code = None
+        
     if address_uber.components.election.blockid == '':
         address_uber.components.election.blockid = None
     if address_uber.components.election.precinct == '':
@@ -1770,17 +1778,17 @@ def parse(item):
 
     # since there aren't set values that are valid for these fields, long strings of junk valuse can come through
     # 6252 N. 4TH ST. 19120DFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFBBBBBBB B
-    if address_uber.components.unit.unit_num != -1 and len(address_uber.components.unit.unit_num) > 12:
-        address_uber.components.unit.unit_num = address_uber.components.unit.unit_num[:12]
-    if len(address_uber.components.unit.unit_type) > 12:
-        address_uber.components.unit.unit_num = address_uber.components.unit.unit_type[:12]
+    if address_uber.components.address_unit.unit_num != -1 and len(address_uber.components.address_unit.unit_num) > 12:
+        address_uber.components.address_unit.unit_num = address_uber.components.address_unit.unit_num[:12]
+    if len(address_uber.components.address_unit.unit_type) > 12:
+        address_uber.components.address_unit.unit_num = address_uber.components.address_unit.unit_type[:12]
 
-    if address_uber.components.unit.unit_num == '':
-        address_uber.components.unit.unit_num = None
-    if address_uber.components.unit.unit_num == -1:
-        address_uber.components.unit.unit_num = None
-    if address_uber.components.unit.unit_type == '':
-        address_uber.components.unit.unit_type = None
+    if address_uber.components.address_unit.unit_num == '':
+        address_uber.components.address_unit.unit_num = None
+    if address_uber.components.address_unit.unit_num == -1:
+        address_uber.components.address_unit.unit_num = None
+    if address_uber.components.address_unit.unit_type == '':
+        address_uber.components.address_unit.unit_type = None
     if address_uber.input_address == '':
         address_uber.input_address = None
     if address_uber.components.street_address == '':
@@ -1946,7 +1954,7 @@ def parse_addr_1(address, item):
     token_len = len(tokens)
 
     if token_len == 3 and tokens[0] == 'RACE' and (tokens[2] == 'PA' or tokens[2] == 'PK'):
-        address.unit.unit_num = tokens[2]
+        address.address_unit.unit_num = tokens[2]
         tokens.pop()
         token_len = 2
 
@@ -1955,36 +1963,36 @@ def parse_addr_1(address, item):
         address.street.parse_method = 'UNK'
         return address
 
-    address.zipcode = handle_city_state_zip(tokens)
+    address.usps.zipcode = handle_city_state_zip(tokens)
     token_len = len(tokens)
     if token_len == 0:
         address.street.name = item
         address.street.parse_method = 'UNK'
         return address
-    address.unit.unit_type = ''
+    address.address_unit.unit_type = ''
 
     # intial attempt at getting R or Rear at the front of the address and treat it as REAR unit
     if token_len > 2 and (tokens[0] == 'R' or tokens[0] == 'REAR'):
         #pre_dir = is_dir(tokens[1])
         #if pre_dir.std != '0':
         tokens.remove(tokens[0])
-        address.unit.unit_type = 'REAR'
+        address.address_unit.unit_type = 'REAR'
 
     # not sure why but this is a common format - 3483 UNIT E THOMPSON
     if token_len > 2 and tokens[0] == 'UNIT' or (token_len == 2 and len(tokens[1]) > 3 and tokens[0] == 'UNIT'):
         tokens.remove(tokens[0])
 
 
-    units = handle_units(tokens, address.unit)
+    units = handle_units(tokens, address.address_unit)
 
-    if units[0] != -1 and address.unit.unit_type == '':
+    if units[0] != -1 and address.address_unit.unit_type == '':
         tokens = unitdesigantor_second_pass(address, units, tokens)
 
     # there isn't a street name, this is junk but put the unit back in the street name
-    if len(tokens) == 0 and (address.unit.unit_num != '' or address.unit.unit_type != ''):
-        address.street.name = '{} {}'.format(address.unit.unit_type,address.unit.unit_num)
-        address.unit.unit_type = ''
-        address.unit.unit_num = ''
+    if len(tokens) == 0 and (address.address_unit.unit_num != '' or address.address_unit.unit_type != ''):
+        address.street.name = '{} {}'.format(address.address_unit.unit_type,address.address_unit.unit_num)
+        address.address_unit.unit_type = ''
+        address.address_unit.unit_num = ''
         return address
 
 
@@ -2061,7 +2069,7 @@ def parse_addr_1(address, item):
                 address.street.predir = pre_dir.correct
                 address.street.name = ' '.join(name_std(tokens[1:], True))
                 address.street.parse_method = '2ADN'
-            # address.unit.unit_type = ''
+            # address.address_unit.unit_type = ''
 
             return address
         # 1234 CENTENNIAL E - only way this is possible is that the suffix was left off
@@ -2071,7 +2079,7 @@ def parse_addr_1(address, item):
             address.street.name = ' '.join(name_std(tokens, True))
             address.street.suffix = ''
             address.street.postdir = ''
-            # address.unit.unit_type = ''
+            # address.address_unit.unit_type = ''
             address.street.parse_method = '2ANN junk postdir'
             return address
 
@@ -2081,7 +2089,7 @@ def parse_addr_1(address, item):
             address.street.name = ' '.join(name_std(tokens, True))
             address.street.suffix = ''
             address.street.postdir = ''
-            # address.unit.unit_type = ''
+            # address.address_unit.unit_type = ''
             address.street.parse_method = '2ANN'
             return address
 
@@ -2155,7 +2163,7 @@ def parse_addr_1(address, item):
                 # postdir is a unit
                 ack = ' '.join(name_std(tokens[:-2], True))
                 temp = is_centerline_name(ack)
-                if temp.full and address.unit.unit_num != '':
+                if temp.full and address.address_unit.unit_num != '':
                     address.street.postdir = ''
                     address.street.predir = ''
                     address.street.name = ' '.join(name_std(tokens[:-2], True))
@@ -2242,22 +2250,22 @@ def parse_addr_1(address, item):
             address.street.suffix = suffix_minus_one.correct
             apt_std = is_apt_std(tokens[token_len - 1])
             # Might need to handle the postdir streets here
-            if post_dir.std != 0 and len(post_dir.common) == 1 and address.unit.unit_num == '':
+            if post_dir.std != 0 and len(post_dir.common) == 1 and address.address_unit.unit_num == '':
                 if post_dir.full == pre_dir.full:
-                    address.unit.unit_num = ''
-                    address.unit.unit_type = ''
+                    address.address_unit.unit_num = ''
+                    address.address_unit.unit_type = ''
                     address.street.postdir = ''
                     address.street.parse_method = '4ADNSdupDir'
                 else:
-                    address.unit.unit_num = post_dir.correct
-                    address.unit.unit_type = '#'
+                    address.address_unit.unit_num = post_dir.correct
+                    address.address_unit.unit_type = '#'
                     address.street.postdir = ''
                     address.street.parse_method = '4ADNSdirUnit'
             elif apt_std:
                 address.street.postdir = ''
                 address.street.parse_method = '4ADNSUnit'
-                address.unit.unit_num = apt_std
-                address.unit.unit_type = '#'
+                address.address_unit.unit_num = apt_std
+                address.address_unit.unit_type = '#'
             else:
                 # 121 S INDPNC MALL E # 218
                 if address.street.name == 'INDENPENDENCE':
@@ -2277,13 +2285,13 @@ def parse_addr_1(address, item):
             address.street.parse_method = '4DNNN'
             return address
 
-        if pre_dir.std == '0' and suffix_minus_one.std != '0' and suffix_end.std == '0' and address.unit.unit_num == '':
+        if pre_dir.std == '0' and suffix_minus_one.std != '0' and suffix_end.std == '0' and address.address_unit.unit_num == '':
             address.address = addrn
             address.street.predir = ''
             address.street.name = ' '.join(name_std(tokens[0:2], True))
             address.street.suffix = suffix_minus_one.correct
             address.street.postdir = ''
-            address.unit.unit_type = is_apt_std(tokens[token_len - 1])
+            address.address_unit.unit_type = is_apt_std(tokens[token_len - 1])
             address.street.parse_method = '4NNSU'
             return address
 
@@ -2333,7 +2341,7 @@ def parse_addr_1(address, item):
             address.street.name = ' '.join(name_std(tokens[0:3], True))
             address.street.suffix = suffix_end.correct
             address.street.postdir = ''
-            address.unit.unit_num = post_dir.common
+            address.address_unit.unit_num = post_dir.common
             address.street.parse_method = '5ANNNSD?'
             return address
 
@@ -2344,7 +2352,7 @@ def parse_addr_1(address, item):
             address.street.predir = pre_dir.correct
             # special case OPS address 7 N CHRIS COLUMBUS BLVD PARK
             if tokens[token_len - 1] == 'PARK':
-                address.unit.unit_type = 'PARK'
+                address.address_unit.unit_type = 'PARK'
                 address.street.name = ' '.join(name_std(tokens[1:-2], True))
                 address.street.suffix = suffix_minus_one.correct
             else:
@@ -2362,7 +2370,7 @@ def parse_addr_1(address, item):
             if address.street.name != 'AVENUE OF THE REPUBLIC':
                 address.street.suffix = suffix_end.correct
             address.street.postdir = ''
-            address.unit.unit_type = is_apt_std(tokens[token_len - 1])
+            address.address_unit.unit_type = is_apt_std(tokens[token_len - 1])
 
             address.street.parse_method = '5NNNSU'
             return address
@@ -2374,8 +2382,8 @@ def parse_addr_1(address, item):
             address.street.name = ' '.join(name_std(tokens[:-2], True))
             address.street.suffix = suffix_minus_one.correct
             address.street.postdir = ''
-            address.unit.unit_num = post_dir.correct
-            address.unit.unit_type = '#'
+            address.address_unit.unit_num = post_dir.correct
+            address.address_unit.unit_type = '#'
             address.street.parse_method = '5ANNNNSD'
             return address
 
@@ -2406,8 +2414,8 @@ def parse_addr_1(address, item):
             address.street.postdir = ''
             apte_std = is_apte(tokens[token_len - 1])
             if apte_std.correct != '':
-                address.unit.unit_type = apte_std
-                #address.unit.unit_type = '#'
+                address.address_unit.unit_type = apte_std
+                #address.address_unit.unit_type = '#'
                 address.street.parse_method = '3bNSU'
             else:
                 address.street.parse_method = '3bNSJ'
@@ -2466,34 +2474,34 @@ def parse_addr_1(address, item):
 
 def unitdesigantor_second_pass(address, apt, tokens):
 
-    address.unit.unit_type = apt[1]
+    address.address_unit.unit_type = apt[1]
     tokens = tokens[0:apt[0]]
-    aptsplit = address.unit.unit_type.split(' ')
+    aptsplit = address.address_unit.unit_type.split(' ')
     if len(aptsplit) == 1:
         apte = is_apte(aptsplit[0])
         if apte.correct != '':
-            address.unit.unit_num = ''
-            address.unit.unit_type = aptsplit[0]
+            address.address_unit.unit_num = ''
+            address.address_unit.unit_type = aptsplit[0]
         else:
-            address.unit.unit_num = address.unit.unit_type
-            address.unit.unit_type = '#'
+            address.address_unit.unit_num = address.address_unit.unit_type
+            address.address_unit.unit_type = '#'
     else:
         apt = is_apt(aptsplit[0])
         apt2 = is_apt(aptsplit[1])
         if apt.correct != '':
-            address.unit.unit_type = aptsplit[0]
-            address.unit.unit_num = aptsplit[1]
+            address.address_unit.unit_type = aptsplit[0]
+            address.address_unit.unit_num = aptsplit[1]
         elif apt2.correct != '':
-            address.unit.unit_type = aptsplit[1]
-            address.unit.unit_num = aptsplit[0]
+            address.address_unit.unit_type = aptsplit[1]
+            address.address_unit.unit_num = aptsplit[0]
         else:
-            address.unit.unit_type = ''
-            address.unit.unit_num = ' '.join(aptsplit)
+            address.address_unit.unit_type = ''
+            address.address_unit.unit_num = ' '.join(aptsplit)
 
-    apte = is_apte(address.unit.unit_num)
-    if address.unit.unit_type == '#' and apte:
-        address.unit.unit_type = address.unit.unit_num
-        address.unit.unit_num = ''
+    apte = is_apte(address.address_unit.unit_num)
+    if address.address_unit.unit_type == '#' and apte:
+        address.address_unit.unit_type = address.address_unit.unit_num
+        address.address_unit.unit_num = ''
 
     return tokens
 
@@ -2542,11 +2550,12 @@ class PassyunkParser:
         if self.return_dict:
             # Hack to make nested addrnum a dict as well
             # parsed_out.components = parsed_out.components.__dict__
+            parsed_out.components.usps = parsed_out.components.usps.__dict__
+            parsed_out.components.election = parsed_out.components.election.__dict__
             parsed_out.components.address = parsed_out.components.address.__dict__
             parsed_out.components.street = parsed_out.components.street.__dict__
             parsed_out.components.street_2 = parsed_out.components.street_2.__dict__
-            parsed_out.components.unit = parsed_out.components.unit.__dict__
-            parsed_out.components.election = parsed_out.components.election.__dict__
+            parsed_out.components.address_unit = parsed_out.components.address_unit.__dict__
             parsed_out.components = parsed_out.components.__dict__
             return parsed_out.__dict__
 

@@ -41,9 +41,9 @@ class Centerline:
         self.to_left = int(row[5])
         self.from_right = int(row[6])
         self.to_right = int(row[7])
-        self.st_code = row[8]
-        self.seg_id = row[9]
-        self.responsibility = row[10].strip()
+        self.street_code = row[8]
+        self.cl_seg_id = row[9]
+        self.cl_responsibility = row[10].strip()
         self.base = '{} {} {} {}'.format(self.pre, self.name, self.suffix, self.post)
         self.base = ' '.join(self.base.split())
         self.oeb_right = oeb(self.from_right, self.to_right)
@@ -264,29 +264,29 @@ def get_cl_info(address, input_):
         if len(matches) == 0:
             # good street name but no matching address range
             if cur_closest_offset is not None:
-                address.st_code = cur_closest.st_code
-                address.seg_id = cur_closest.seg_id
-                address.responsibility = cur_closest.responsibility
+                address.street.street_code = cur_closest.street_code
+                address.cl_seg_id = cur_closest.cl_seg_id
+                address.cl_responsibility = cur_closest.cl_responsibility
                 address.cl_addr_match = 'RANGE:' + str(cur_closest_offset)
                 address.address.full = str(cur_closest_addr)
                 return
 
-            address.st_code = cl.st_code
+            address.street.street_code = cl.street_code
             address.cl_addr_match = 'MATCH TO STREET WITH NO ADDR RANGE'
             return
 
         # Exact Match
         if len(matches) == 1:
             match = matches[0]
-            address.st_code = match.st_code
-            address.seg_id = match.seg_id
-            address.responsibility = match.responsibility
+            address.street.street_code = match.street_code
+            address.cl_seg_id = match.cl_seg_id
+            address.cl_responsibility = match.cl_responsibility
             address.cl_addr_match = 'A'
             return
 
         # Exact Street match, multiple range matches, return the count of matches
         if len(matches) > 1:
-            address.st_code = cl.st_code
+            address.street.street_code = cl.street_code
             address.cl_addr_match = 'AM'
             # address.cl_addr_match = str(len(matches))
             return
@@ -383,9 +383,9 @@ def get_cl_info(address, input_):
                 if address.street.suffix != match.suffix:
                     match_type += ' Suffix'
                     address.street.suffix = match.suffix
-                address.st_code = match.st_code
-                address.seg_id = match.seg_id
-                address.responsibility = match.responsibility
+                address.street.street_code = match.street_code
+                address.cl_seg_id = match.cl_seg_id
+                address.cl_responsibility = match.cl_responsibility
                 address.cl_addr_match = match_type
                 return
 
@@ -402,15 +402,15 @@ def get_cl_info(address, input_):
             if address.street.suffix != match.suffix:
                 match_type += ' Suffix'
                 address.street.suffix = match.suffix
-            address.st_code = match.st_code
-            address.seg_id = match.seg_id
-            address.responsibility = match.responsibility
+            address.street.street_code = match.street_code
+            address.cl_seg_id = match.cl_seg_id
+            address.cl_responsibility = match.cl_responsibility
             address.cl_addr_match = match_type
             return
 
         # need to resolve dir and/or suffix
         if len(matches) > 1:
-            address.st_code = row.st_code
+            address.street.street_code = row.street_code
             address.cl_addr_match = 'MULTI'  # str(len(matches))
             return
 

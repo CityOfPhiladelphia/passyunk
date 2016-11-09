@@ -223,8 +223,8 @@ def get_unique_zipcodes(lst):
 
 def get_zip_info(address, input_):
     zlist = is_zip4_base(address.street.full)
-    addr_unit = parse_unit_num(address.unit.unit_num)
-    addr_type = address.unit.unit_type
+    addr_unit = parse_unit_num(address.address_unit.unit_num)
+    addr_type = address.address_unit.unit_type
     if addr_type == '#':
         addr_type = ''
 
@@ -233,42 +233,42 @@ def get_zip_info(address, input_):
         for row in zlist:
             if row.low <= address.address.low_num <= row.high and (
                             address.address.parity == row.oeb or row.oeb == 'B'):
-                # if address.unit.unit_type == '' and address.unit.unit_num =='' and row.unit == '' and row.unitlow.full == '':
+                # if address.address_unit.unit_type == '' and address.address_unit.unit_num =='' and row.unit == '' and row.unitlow.full == '':
                 #     mlist.append(row)
-                # if address.unit.unit_num != '' and row.unit != '' and address.unit.unit_num == row.unit:
+                # if address.address_unit.unit_num != '' and row.unit != '' and address.address_unit.unit_num == row.unit:
                 #     mlist.append(row)
-                # if address.unit.unit_type != '' and row.unitlow.full != '':
+                # if address.address_unit.unit_type != '' and row.unitlow.full != '':
                 mlist.append(row)
 
         if len(mlist) == 0:
-            address.zip4 = ''
+            address.usps.zip4 = ''
         if len(mlist) == 1:
-            address.zipcode = mlist[0].zipcode
-            address.zip4 = mlist[0].zip4
-            address.uspstype = mlist[0].recordtype
-            address.bldgfirm = mlist[0].buildingorfirm
+            address.usps.zipcode = mlist[0].zipcode
+            address.usps.zip4 = mlist[0].zip4
+            address.usps.uspstype = mlist[0].recordtype
+            address.usps.bldgfirm = mlist[0].buildingorfirm
             return
 
         elif len(mlist) > 1:
-            if address.unit.unit_num == '' and addr_type == '':
-                address.zip4 = 'MB'
+            if address.address_unit.unit_num == '' and addr_type == '':
+                address.usps.zip4 = 'MB'
 
             # this is likely a building with multiple zip4s
-            if address.unit.unit_num == '' and addr_type == '':
+            if address.address_unit.unit_num == '' and addr_type == '':
                 recordtypedict = {}
                 for m in mlist:
                     if m.unit == '' and m.unitlow.full == '':
                         recordtypedict[m.recordtype] = m.recordtype
                         # not sure if there are more than one ever but we will take the last one for now
                         if m.buildingorfirm.strip() != '':
-                            address.bldgfirm = m.buildingorfirm
+                            address.usps.bldgfirm = m.buildingorfirm
                             # print(m.buildingorfirm+ ' '+m.recordtype, file=sys.stderr)
 
                 # might be able to get a good zipcode still
                 zips = get_unique_zipcodes(mlist)
                 if len(zips) == 1:
-                    address.zipcode = zips[0]
-                    address.zip4 = 'M'
+                    address.usps.zipcode = zips[0]
+                    address.usps.zip4 = 'M'
 
                 # for key,value in sorted(recordtypedict.items()):
                 #    print(value, file=sys.stderr)
@@ -279,7 +279,7 @@ def get_zip_info(address, input_):
             # it's a good match.  If there are more than one, it would appear that there is something like Penthouse and
             # apt with the same number.  If there are no matches, don't give up, USPS might not have that specific unit.
             # Check highrise list
-            if address.unit.unit_num != '' and addr_type == '':
+            if address.address_unit.unit_num != '' and addr_type == '':
                 mlist2 = []
                 for m in mlist:
                     # TODO handle OEB
@@ -293,10 +293,10 @@ def get_zip_info(address, input_):
                     except TypeError:
                         pass
                 if len(mlist2) == 1:
-                    address.zipcode = mlist2[0].zipcode
-                    address.zip4 = mlist2[0].zip4
-                    address.unit.unit_type = mlist2[0].unit
-                    address.uspstype = mlist2[0].recordtype
+                    address.usps.zipcode = mlist2[0].zipcode
+                    address.usps.zip4 = mlist2[0].zip4
+                    address.address_unit.unit_type = mlist2[0].unit
+                    address.usps.uspstype = mlist2[0].recordtype
                     return
 
                 # if usps has a record for both UNIT and APT, take the APT record
@@ -304,10 +304,10 @@ def get_zip_info(address, input_):
                 # 220 LOCUST ST # 2AS -2AS
                 # 220 LOCUST ST # 2A - 2H
                 if len(mlist2) == 2 and mlist2[0].zip4 == mlist2[1].zip4:
-                    address.zipcode = mlist2[0].zipcode
-                    address.zip4 = mlist2[0].zip4
-                    address.unit.unit_type = mlist2[0].unit
-                    address.uspstype = mlist2[0].recordtype
+                    address.usps.zipcode = mlist2[0].zipcode
+                    address.usps.zip4 = mlist2[0].zip4
+                    address.address_unit.unit_type = mlist2[0].unit
+                    address.usps.uspstype = mlist2[0].recordtype
                     # print('Multiple matches, everything the same but unit: '+ input_, file=sys.stderr)
                     # print('  '+mlist2[0].unit, file=sys.stderr)
                     # print('  '+mlist2[1].unit, file=sys.stderr)
@@ -317,19 +317,19 @@ def get_zip_info(address, input_):
                 # TODO: 11580 ROOSEVELT BLVD # 116
                 if len(mlist2) == 2 and mlist2[0].zip4 != mlist2[1].zip4 and mlist2[0].unit == mlist2[1].unit:
                     if mlist2[0].unitlow.full == mlist2[0].unithigh.full:
-                        address.zipcode = mlist2[0].zipcode
-                        address.zip4 = mlist2[0].zip4
-                        address.unit.unit_type = mlist2[0].unit
-                        address.uspstype = mlist2[0].recordtype
+                        address.usps.zipcode = mlist2[0].zipcode
+                        address.usps.zip4 = mlist2[0].zip4
+                        address.address_unit.unit_type = mlist2[0].unit
+                        address.usps.uspstype = mlist2[0].recordtype
                         # print('Multiple matches, unit range and exact: '+ input_, file=sys.stderr)
                         # print('  '+mlist2[0].unitlow.full, file=sys.stderr)
                         # print('  '+mlist2[0].unithigh.full, file=sys.stderr)
                         return
                     if mlist2[1].unitlow.full == mlist2[1].unithigh.full:
-                        address.zipcode = mlist2[1].zipcode
-                        address.zip4 = mlist2[1].zip4
-                        address.unit.unit_type = mlist2[1].unit
-                        address.uspstype = mlist2[0].recordtype
+                        address.usps.zipcode = mlist2[1].zipcode
+                        address.usps.zip4 = mlist2[1].zip4
+                        address.address_unit.unit_type = mlist2[1].unit
+                        address.usps.uspstype = mlist2[0].recordtype
                         # print('Multiple matches, unit range and exact: '+ input_, file=sys.stderr)
                         # print('  '+mlist2[1].unitlow.full, file=sys.stderr)
                         # print('  '+mlist2[1].unithigh.full, file=sys.stderr)
@@ -345,17 +345,17 @@ def get_zip_info(address, input_):
                         if m.recordtype == 'H' and m.unitlow.full == '' and m.unit == '':
                             mlist2.append(m)
                         if len(mlist2) == 1:
-                            address.zipcode = mlist2[0].zipcode
-                            address.zip4 = mlist2[0].zip4
-                            address.unit.unit_type = mlist2[0].unit
-                            address.uspstype = m.recordtype
+                            address.usps.zipcode = mlist2[0].zipcode
+                            address.usps.zip4 = mlist2[0].zip4
+                            address.address_unit.unit_type = mlist2[0].unit
+                            address.usps.uspstype = m.recordtype
                             return
 
                     # might be able to get a good zipcode still
                     zips = get_unique_zipcodes(mlist)
                     if len(zips) == 1:
-                        address.zipcode = zips[0]
-                        address.zip4 = 'NMx'
+                        address.usps.zipcode = zips[0]
+                        address.usps.zip4 = 'NMx'
                         return
                         # print('Todo: 0 matches for address with unit num but no type ' + input_, file=sys.stderr)
 
@@ -363,40 +363,40 @@ def get_zip_info(address, input_):
                     # might be able to get a good zipcode still
                     zips = get_unique_zipcodes(mlist)
                     if len(zips) == 1:
-                        address.zipcode = zips[0]
-                        address.zip4 = 'NMu'
+                        address.usps.zipcode = zips[0]
+                        address.usps.zip4 = 'NMu'
                     # print('multiple matches for address with unit num but no type ' + input_, file=sys.stderr)
                     return
 
             # only have a unit type and no unit number
-            if address.unit.unit_num == '' and address.unit.unit_type != '':
+            if address.address_unit.unit_num == '' and address.address_unit.unit_type != '':
                 mlist2 = []
                 for m in mlist:
-                    if m.unit == address.unit.unit_type:
+                    if m.unit == address.address_unit.unit_type:
                         mlist2.append(m)
                 if len(mlist2) == 1:
-                    address.zipcode = mlist2[0].zipcode
-                    address.zip4 = mlist2[0].zip4
-                    address.uspstype = mlist2[0].recordtype
+                    address.usps.zipcode = mlist2[0].zipcode
+                    address.usps.zip4 = mlist2[0].zip4
+                    address.usps.uspstype = mlist2[0].recordtype
                     return
                 if len(mlist2) == 0:
                     zips = get_unique_zipcodes(mlist)
                     if len(zips) == 1:
-                        address.zipcode = zips[0]
+                        address.usps.zipcode = zips[0]
                         # print('Todo: 0 matches for address with unit type but no number ' + input_, file=sys.stderr)
                 if len(mlist2) > 1:
                     # might be able to get a good zipcode still
                     zips = get_unique_zipcodes(mlist)
                     if len(zips) == 1:
-                        address.zipcode = zips[0]
+                        address.usps.zipcode = zips[0]
                     # print('multiple matches for address with unit type but no number ' + input_, file=sys.stderr)
                     return
 
-            if address.unit.unit_num != '' and addr_type != '':
+            if address.address_unit.unit_num != '' and addr_type != '':
                 mlist2 = []
                 # TODO handle OEB
                 for m in mlist:
-                    if m.unit == address.unit.unit_type and \
+                    if m.unit == address.address_unit.unit_type and \
                                             m.unitlow.num <= addr_unit.num <= m.unithigh.num and \
                                             m.unitlow.post <= addr_unit.post <= m.unithigh.post and \
                                     m.unitlow.pre == addr_unit.pre:
@@ -407,9 +407,9 @@ def get_zip_info(address, input_):
                             mlist2.append(m)
 
                 if len(mlist2) == 1:
-                    address.zipcode = mlist2[0].zipcode
-                    address.zip4 = mlist2[0].zip4
-                    address.uspstype = mlist2[0].recordtype
+                    address.usps.zipcode = mlist2[0].zipcode
+                    address.usps.zip4 = mlist2[0].zip4
+                    address.usps.uspstype = mlist2[0].recordtype
                     return
                 # lets try this again without the unit_type
                 if len(mlist2) == 0:
@@ -428,21 +428,21 @@ def get_zip_info(address, input_):
                                                 addr_type == 'FL' and mlist2[0].unit == 'FRNT':
                             pass  # print('Unit No Change - '+ input_ +' : '+ mlist2[0].unit, file=sys.stderr)
                         else:
-                            if address.unit.unit_type == mlist2[0].unit or (
-                                            address.unit.unit_type == 'UNIT' and mlist2[0].unit == 'APT') or (
-                                            address.unit.unit_type == 'APT' and mlist2[0].unit == 'UNIT'):
-                                address.unit.unit_type = mlist2[0].unit
+                            if address.address_unit.unit_type == mlist2[0].unit or (
+                                            address.address_unit.unit_type == 'UNIT' and mlist2[0].unit == 'APT') or (
+                                            address.address_unit.unit_type == 'APT' and mlist2[0].unit == 'UNIT'):
+                                address.address_unit.unit_type = mlist2[0].unit
                                 suppress_msg = True
                             else:
-                                address.unit.unit_type = mlist2[0].unit
+                                address.address_unit.unit_type = mlist2[0].unit
                                 suppress_msg = False
-                            address.zipcode = mlist2[0].zipcode
-                            address.zip4 = mlist2[0].zip4
-                            address.uspstype = mlist2[0].recordtype
+                            address.usps.zipcode = mlist2[0].zipcode
+                            address.usps.zip4 = mlist2[0].zip4
+                            address.usps.uspstype = mlist2[0].recordtype
 
                             # need because of addrs like this - 3900 FORD ROAD UNIT PH
-                            if address.unit.unit_type == address.unit.unit_num:
-                                address.unit.unit_num = ''
+                            if address.address_unit.unit_type == address.address_unit.unit_num:
+                                address.address_unit.unit_num = ''
                                 # if suppress_msg == False:
                                 # print('Unit Change - ' + input_ + ' : ' + mlist2[0].unit, file=sys.stderr)
                             return
@@ -450,8 +450,8 @@ def get_zip_info(address, input_):
                     # might be able to get a good zipcode still
                     zips = get_unique_zipcodes(mlist)
                     if len(zips) == 1:
-                        address.zipcode = zips[0]
-                        address.zip4 = 'NM'
+                        address.usps.zipcode = zips[0]
+                        address.usps.zip4 = 'NM'
                         return
 
                         # print('Todo: 0 matches for address with unit type and  number ' + input_, file=sys.stderr)
@@ -459,15 +459,15 @@ def get_zip_info(address, input_):
                 if len(mlist2) > 1:
                     for m in mlist2:
                         if m.unitlow.full == addr_unit.full and m.unithigh.full == addr_unit.full:
-                            address.uspstype = m.recordtype
-                            address.zipcode = m.zipcode
-                            address.zip4 = m.zip4
+                            address.usps.uspstype = m.recordtype
+                            address.usps.zipcode = m.zipcode
+                            address.usps.zip4 = m.zip4
                             return
 
                     # might be able to get a good zipcode still
                     zips = get_unique_zipcodes(mlist)
                     if len(zips) == 1:
-                        address.zipcode = zips[0]
+                        address.usps.zipcode = zips[0]
                         print('multiple matches for address with unit type and number - unique zip :' + input_,
                               file=sys.stderr)
                     else:
