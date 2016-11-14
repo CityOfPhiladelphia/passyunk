@@ -1661,7 +1661,7 @@ def parse(item):
     if is_cl_file:
         get_cl_info(address, address_uber.input_address)
         if address_uber.type == 'intersection_addr':
-            get_cl_info_street2(address, address_uber.input_address)
+            get_cl_info_street2(address)
 
         # if the users doesn't have the zip4 file, parser will still work
 
