@@ -399,6 +399,12 @@ def get_cl_info(address, input_):
             if address.street.postdir != match.post:
                 match_type += ' Post'
                 address.street.postdir = match.post
+                # The postdir was parsed to unit - 1 S SCHUYLKILL AV W,  Need to removed unit now that post dir was
+                # added back in
+                if address.street.postdir == address.address_unit.unit_num and address.address_unit.unit_type == '#':
+                    address.address_unit.unit_num = ''
+                    address.address_unit.unit_type = ''
+
             if address.street.suffix != match.suffix:
                 match_type += ' Suffix'
                 address.street.suffix = match.suffix
@@ -443,3 +449,15 @@ def get_cl_info(address, input_):
 
             get_cl_info(address, input_)
             return
+
+# simple method for adding street_code to street_2
+def get_cl_info_street2(address):
+
+    # Get matching centerlines based on street name
+    centerlines = is_cl_base(address.street_2.full)
+
+    # If there are matches
+    if len(centerlines) > 0:
+        address.street_2.street_code = centerlines[0].street_code
+        return
+

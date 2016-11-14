@@ -19,7 +19,7 @@ import re
 import sys
 import warnings
 
-from .centerline import create_cl_lookup, get_cl_info
+from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2
 from .data import STATELIST, CITYLIST, CARDINAL_DIR, PREPOSTDIR, POSTDIR, \
     PREDIR_AS_NAME, \
     SUFFIX_IN_NAME, opa_account_re, zipcode_re, po_box_re, AddrType, \
@@ -75,11 +75,11 @@ class Address:
         self.street = Street()
         self.street_2 = Street()
         self.address_unit = Unit()
-        self.usps = Usps()
+        self.mailing = Mailing()
         self.election = Election()
         #self.zipcode = ''
-        #self.usps.zip4 = ''
-        self.matchdesc = ''
+        #self.mailing.zip4 = ''
+        #self.matchdesc = ''
         #self.street_code = ''
         self.cl_seg_id = ''
         self.cl_responsibility = ''
@@ -102,12 +102,13 @@ class Election:
         self.blockid = ''
         self.precinct = ''
 
-class Usps:
+class Mailing:
     def __init__(self):
         self.zipcode = ''
         self.zip4 = ''
         self.bldgfirm = ''
         self.uspstype = ''
+        self.matchdesc = ''
 
 class Nameswitch:
     def __init__(self, row):
@@ -974,8 +975,10 @@ def is_addr(test, ver):
     """
 
     """
-    if test == '':
-        return
+    addr_ret = Addrnum()
+
+    if test == '' or len(test) > 12:
+        return addr_ret
 
     if test[0:2] != '0-':
         test = test.lstrip('0')
@@ -1000,7 +1003,7 @@ def is_addr(test, ver):
         tokens.pop()
         tokenlen = len(tokens)
 
-    addr_ret = Addrnum()
+
 
     if half:
         addr_ret.fractional = '1/2'
@@ -1643,6 +1646,7 @@ def parse(item):
     if address_uber.type == AddrType.address and not address_uber.components.street.is_centerline_match:
         centerline_rematch(address.street)
 
+
     if address_uber.type == AddrType.intersection_addr:
         centerline_rematch(address.street)
         centerline_rematch(address.street_2)
@@ -1656,6 +1660,8 @@ def parse(item):
     # if the users doesn't have the centerline file, parser will still work
     if is_cl_file:
         get_cl_info(address, address_uber.input_address)
+        if address_uber.type == 'intersection_addr':
+            get_cl_info_street2(address, address_uber.input_address)
 
         # if the users doesn't have the zip4 file, parser will still work
 
@@ -1671,8 +1677,8 @@ def parse(item):
         if address_uber.components.address_unit.unit_type == '' and address_uber.components.address_unit.unit_num != '':
             address_uber.components.address_unit.unit_type = '#'
 
-    if len(address.usps.zip4) == 4 and address.usps.zip4[2:4] == 'ND':
-        address.usps.zip4 = ''
+    if len(address.mailing.zip4) == 4 and address.mailing.zip4[2:4] == 'ND':
+        address.mailing.zip4 = ''
 
     if address_uber.type == AddrType.intersection and address.base_address.find(' & ') == -1:
         address_uber.type = AddrType.address
@@ -1701,18 +1707,18 @@ def parse(item):
 
     if address_uber.components.base_address == '':
         address_uber.components.base_address = None
-    if address_uber.components.usps.zipcode == '':
-        address_uber.components.usps.zipcode = None
-    if address_uber.components.usps.zip4 == '':
-        address_uber.components.usps.zip4 = None
-    if address_uber.components.usps.uspstype == '':
-        address_uber.components.usps.uspstype = None
-    if address_uber.components.usps.bldgfirm == '':
-        address_uber.components.usps.bldgfirm = None
+    if address_uber.components.mailing.zipcode == '':
+        address_uber.components.mailing.zipcode = None
+    if address_uber.components.mailing.zip4 == '':
+        address_uber.components.mailing.zip4 = None
+    if address_uber.components.mailing.uspstype == '':
+        address_uber.components.mailing.uspstype = None
+    if address_uber.components.mailing.bldgfirm == '':
+        address_uber.components.mailing.bldgfirm = None
     if address_uber.components.cl_addr_match == '':
         address_uber.components.cl_addr_match = None
-    if address_uber.components.matchdesc == '':
-        address_uber.components.matchdesc = None
+    if address_uber.components.mailing.matchdesc == '':
+        address_uber.components.mailing.matchdesc = None
     if address_uber.components.cl_responsibility == '':
         address_uber.components.cl_responsibility = None
     if address_uber.components.cl_seg_id == '':
@@ -1838,6 +1844,13 @@ def input_cleanup(address_uber, item):
 
 def split_lead_numbers_from_alpha_string(item):
     tokens = item.split()
+
+    i = 0
+    for token in tokens:
+        if len(token)>30:
+            del tokens[i]
+        i += 1
+
     if len(tokens) == 0:
         return tokens
     if len(tokens) == 1 and len(tokens[0])<4:
@@ -1882,6 +1895,7 @@ def split_lead_numbers_from_alpha_string(item):
             tokens[1] = trail_string
     if len(tokens) >= 1 and pre_dir.std != '0' and suffix.std == '0':
         tokens.insert(0, pre_dir.correct)
+
     return tokens
 
 
@@ -1963,7 +1977,7 @@ def parse_addr_1(address, item):
         address.street.parse_method = 'UNK'
         return address
 
-    address.usps.zipcode = handle_city_state_zip(tokens)
+    address.mailing.zipcode = handle_city_state_zip(tokens)
     token_len = len(tokens)
     if token_len == 0:
         address.street.name = item
@@ -2550,7 +2564,7 @@ class PassyunkParser:
         if self.return_dict:
             # Hack to make nested addrnum a dict as well
             # parsed_out.components = parsed_out.components.__dict__
-            parsed_out.components.usps = parsed_out.components.usps.__dict__
+            parsed_out.components.mailing = parsed_out.components.mailing.__dict__
             parsed_out.components.election = parsed_out.components.election.__dict__
             parsed_out.components.address = parsed_out.components.address.__dict__
             parsed_out.components.street = parsed_out.components.street.__dict__
