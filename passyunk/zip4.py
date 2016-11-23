@@ -481,11 +481,13 @@ def get_zip_info(address, input_):
                     zips = get_unique_zipcodes(mlist)
                     if len(zips) == 1:
                         address.mailing.zipcode = zips[0]
-                        print('multiple matches for address with unit type and number - unique zip :' + input_,
-                              file=sys.stderr)
+                        address.mailing.matchdesc = 'MMA_UN_UZ'
+                        #print('multiple matches for address with unit type and number - unique zip :' + input_,
+                        #      file=sys.stderr)
                     else:
-                        print('multiple matches for address with unit type and number multiple unique zip :' + input_,
-                              file=sys.stderr)
+                        address.mailing.matchdesc = 'MMA_UN_MUZ'
+                        #print('multiple matches for address with unit type and number multiple unique zip :' + input_,
+                        #      file=sys.stderr)
                     return
 
                     # print('multiple: ' + input_, file=sys.stderr)

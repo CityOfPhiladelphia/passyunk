@@ -53,6 +53,11 @@ APTSPECIAL_1TOKEN = ['2ND', '1ST', '2R', '1R', '01FL', '02FL', '03FL']
 
 zipcode_re = re.compile('^(\d{5}(\-\d{4})?)?$')
 
+# 3 digits, N or S, 2 digits, - 4 digits or just 4 digits
+# 123N12-1234 or 123N121234
+mapreg_re = re.compile('^(\d{3}([N]|[S])(\d{2})(\d{4}|[-]\d{4}))?$')
+#mapreg_re = re.compile('^(\d{3}([N]|[S])(\d{2})(\-\d{4}|\d{4})?)?$')
+
 # 9 digit numeric
 opa_account_re = re.compile('^(\d{9})?$')
 
@@ -72,4 +77,13 @@ class Enum(set):
         raise AttributeError
 
 
-AddrType = Enum(['none', 'address', 'account', 'street', 'intersection_addr', 'block', 'place', 'pobox', 'zipcode'])
+AddrType = Enum(['none',
+                 'address',
+                 'opa_account',
+                 'street',
+                 'intersection_addr',
+                 'block',
+                 'mapreg' ,
+                 'place',
+                 'pobox',
+                 'zipcode'])
