@@ -263,6 +263,11 @@ def get_cl_info(address, input_):
 
         if len(matches) == 0:
             # good street name but no matching address range
+            if addr_low_num == -1 and cur_closest is not None:
+                address.street.street_code = cur_closest.street_code
+                address.street.is_centerline_match = True
+                return
+
             if cur_closest_offset is not None:
                 address.street.street_code = cur_closest.street_code
                 address.cl_seg_id = cur_closest.cl_seg_id
