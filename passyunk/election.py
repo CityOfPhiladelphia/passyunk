@@ -28,8 +28,8 @@ class Blocks:
         self.name = row[2]
         self.suffix = row[3]
         self.post = row[4]
-        self.low = int(row[5])
-        self.high = int(row[6])
+        self.low = int(row[5]) if len(row[5].strip()) > 0 else None
+        self.high = int(row[6]) if len(row[5].strip()) > 0 else None
         self.oeb = row[7]
         self.blockid = row[8]
         self.usage = row[9]
