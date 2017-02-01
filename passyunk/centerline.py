@@ -13,6 +13,7 @@ cwd += '/pdata'
 # cwd = cwd.replace('\\','/')
 cl_file = 'centerline'
 
+MAX_RANGE = 200
 
 # cfout = open(os.path.dirname(__file__)+'/sandbox/fuzzyout.csv', 'w')
 # print(Levenshtein.ratio('BREAD', 'BROAD'))
@@ -208,7 +209,7 @@ def is_cl_name(test):
     return cl_list[name.low:name.high]
 
 
-def get_cl_info(address, input_):
+def get_cl_info(address, addr_uber):
     addr_low_num = address.address.low_num
     addr_parity = address.address.parity
 
@@ -268,7 +269,7 @@ def get_cl_info(address, input_):
                 address.street.is_centerline_match = True
                 return
 
-            if cur_closest_offset is not None:
+            if cur_closest_offset is not None and cur_closest_offset < MAX_RANGE:
                 address.street.street_code = cur_closest.street_code
                 address.cl_seg_id = cur_closest.cl_seg_id
                 address.cl_responsibility = cur_closest.cl_responsibility
@@ -276,8 +277,10 @@ def get_cl_info(address, input_):
                 address.address.full = str(cur_closest_addr)
                 return
 
+            # Treat as a Street Match
+            addr_uber.type = 'street'
             address.street.street_code = cl.street_code
-            address.cl_addr_match = 'MATCH TO STREET WITH NO ADDR RANGE'
+            address.cl_addr_match = 'MATCH TO STREET. ADDR NUMBER NO MATCH'
             return
 
         # Exact Match
@@ -441,7 +444,7 @@ def get_cl_info(address, input_):
         if len(options) > 0 and options[0][0][0] == address.street.name[0] and len(address.street.name) > 3 and \
                         int(options[0][1]) >= 91 and abs(len(address.street.name) - len(options[0][0])) <= 4:
             if len(options) > 1 and options[0][1] == options[1][1]:
-                tie_print = input_ + ',' + address.street.name + ',' + options[0][0] + ',' + str(
+                tie_print = addr_uber.input_address + ',' + address.street.name + ',' + options[0][0] + ',' + str(
                     options[0][1]) + ',' + options[1][0] + ',' + str(
                     options[1][1])
                 # print(tie_print)
@@ -452,7 +455,7 @@ def get_cl_info(address, input_):
             address.street.name = options[0][0]
             address.street.score = tie + str(options[0][1])
 
-            get_cl_info(address, input_)
+            get_cl_info(address, addr_uber)
             return
 
 # simple method for adding street_code to street_2

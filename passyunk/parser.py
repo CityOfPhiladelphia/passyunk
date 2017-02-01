@@ -317,24 +317,22 @@ def parse(item):
         address.street.name = 'PO BOX {}'.format(num)
 
     else:
-        if ' BLOCK ' in item or ' BLK ' in item:
-            item = item.replace(' BLOCK OF ', ' ')
-            item = item.replace(' BLOCK ', ' ')
-            item = item.replace(' BLK OF ', ' ')
-            item = item.replace(' BLK ', ' ')
-            address_uber.type = AddrType.block
+#######################################################################################################################
 
         address = parse_addr_1(address, item)
         if address.street.parse_method == 'UNK':
             address_uber.type = AddrType.none
             address_uber.components.output_address = item
         else:
-            if address.address.isaddr:
-                address_uber.type = AddrType.address
+            if address.address.isaddr and address_uber.type != AddrType.block:
+                if address.address.addrnum_type == 'RANGE':
+                    address_uber.type = AddrType.range
+                else:
+                    address_uber.type = AddrType.address
                 if address.street.name == '':
                     raise ValueError('Parsed address does not have a street name: {}'.format(item))
 
-            else:
+            elif address_uber.type != AddrType.block:
                 address_uber.type = AddrType.street
 
     name_switch(address)
@@ -354,7 +352,7 @@ def parse(item):
 
     # if the users doesn't have the centerline file, parser will still work
     if is_cl_file:
-        get_cl_info(address, address_uber.input_address)
+        get_cl_info(address, address_uber)
         if address_uber.type == 'intersection_addr':
             get_cl_info_street2(address)
 
@@ -396,10 +394,6 @@ def parse(item):
 
     if temp_centerline.full != '0':
         address_uber.components.street.is_centerline_match = True
-
-    # Address was identified as having a block range 200-298
-    if address_uber.components.address.addrnum_type == 'BLOCK':
-        address_uber.type = AddrType.block
 
     if address_uber.type == AddrType.street and address.street.street_code == '':
         address_uber.type = AddrType.none
@@ -537,9 +531,26 @@ def input_cleanup(address_uber, item):
     item = item.replace(' AT ', ' AND ')
     item = item.replace(' UNIT UNIT', ' UNIT ')  #yes this is common
     item = item.replace('1 AND 2', ' 1/2 ')
+    item = item.replace(' - ', '-')
+    item = item.replace(' -', '-')
+    item = item.replace('- ', '-')
 
+    # Remove ES, WS, NS, SS
+    item = re.sub(' (NS|SS|ES|WS)$', '', item)
 
+    item = item.replace(' OPP ', ' ')
+    if item.startswith('OPP '):
+        item = item[4:]
 
+    if ' BLOCK ' in item or ' BLK ' in item:
+        #  Parking data
+        item = item.replace('UNIT BLK', '1 ')
+
+        item = item.replace(' BLOCK OF ', ' ')
+        item = item.replace(' BLOCK ', ' ')
+        item = item.replace(' BLK OF ', ' ')
+        item = item.replace(' BLK ', ' ')
+        address_uber.type = AddrType.block
 
     item = ' '.join(item.split())
 
