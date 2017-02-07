@@ -1280,7 +1280,7 @@ def is_addr(test, ver):
         else:
             addr_ret.low = tokens[0]
             addr_ret.high = tokens[2][-2:]
-            addr_ret.high_num_full = tokens[2]
+            addr_ret.high_num_full = int(tokens[2])
             addr_ret.isaddr = True
             addr_ret.addrnum_type = 'Range'
             return addr_ret
