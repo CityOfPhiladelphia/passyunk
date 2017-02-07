@@ -60,3 +60,6 @@ target/
 
 venv/
 sandbox/
+
+# data files
+pdata/

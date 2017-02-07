@@ -154,10 +154,13 @@ def get_election_info(address):
     if len(elist) > 0:
         mlist = []
         for row in elist:
-            if row.low <= address.address.low_num <= row.high and (
-                            address.address.parity == row.oeb or row.oeb == 'B'):
-                mlist.append(row)
-
+            # Some blocks in election_blocks.csv don't have address ranges (253 PORT ROYAL)
+            try:
+                if row.low <= address.address.low_num <= row.high and (
+                                address.address.parity == row.oeb or row.oeb == 'B'):
+                    mlist.append(row)
+            except TypeError:
+                pass
         if len(mlist) == 0:
             address.blockid = ''
             address.precinct = ''
