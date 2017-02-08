@@ -38,8 +38,8 @@ class Zip4s:
         # self.unithigh = row[10]
         self.unithigh = parse_unit_num(row[10].strip())
         self.unitoeb = row[11]
-        self.buildingorfirm = row[12]
-        self.recordtype = row[13]
+        self.buildingorfirm = row[12].strip()
+        self.recordtype = row[13].strip()
         self.zipcode = row[14]
         self.zip4 = row[15]
 

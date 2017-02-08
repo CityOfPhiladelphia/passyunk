@@ -28,8 +28,8 @@ class Blocks:
         self.name = row[2]
         self.suffix = row[3]
         self.post = row[4]
-        self.low = int(row[5]) if len(row[5].strip()) > 0 else None
-        self.high = int(row[6]) if len(row[5].strip()) > 0 else None
+        self.low = int(row[5]) if len(row[5].strip()) > 0 else 0
+        self.high = int(row[6]) if len(row[5].strip()) > 0 else 0
         self.oeb = row[7]
         self.blockid = row[8]
         self.usage = row[9]
@@ -169,7 +169,23 @@ def get_election_info(address):
             address.election.precinct = mlist[0].precinct
             return
 
-        elif len(mlist) > 1:
-            address.blockid = 'MULTIPLE'
-            address.precinct = 'MULTIPLE'
+        elif len(mlist) >=2:
+            unique_precinct = get_unique_precincts(mlist)
+            if len(unique_precinct) == 1:
+                address.election.precinct = mlist[0].precinct
+            else:
+                address.precinct = 'MULTIPLE'
+
+        else:
+            address.precinct = ''
             return
+
+def get_unique_precincts(lst):
+    tmp = {}
+    precinct = []
+    for row in lst:
+        tmp[row.precinct] = row.precinct
+    # seems easier to just return a list than to deal with a dict - precinct.values()[0]
+    for r in tmp:
+        precinct.append(r)
+    return precinct

@@ -934,12 +934,36 @@ def is_addr(test, ver):
     if half:
         addr_ret.fractional = '1/2'
 
+    if tokenlen == 1 and tokens[0].isdigit():
+        if int(tokens[0]) % 2 == 0:
+            addr_ret.parity = 'E'
+        else:
+            addr_ret.parity = 'O'
+        # if half:
+        #     tokens.append(' 1/2')
+        # and address number of zero, return as true but blank it out
+        if tokens[0] == '0' or tokens[0] == '00':
+            addr_ret.low_num = -1
+            addr_ret.high_num = -1
+            addr_ret.parity = 'U'
+            addr_ret.low = ''
+            addr_ret.high = ''
+            addr_ret.isaddr = True
+        else:
+            addr_ret.low_num = int(tokens[0])
+            addr_ret.high_num = -1
+            addr_ret.low = ''.join(tokens)
+            addr_ret.high = ''
+            addr_ret.low = addr_ret.low.lstrip('0')
+            addr_ret.isaddr = True
+        addr_ret.addrnum_type = 'N'
+        return addr_ret
+
     # 123-25
-    if tokenlen == 3 and \
-            tokens[0].isdigit() and \
-                    tokens[1] == '-' and \
-                    len(tokens[2]) <= 2 and \
-            tokens[2].isdigit():
+    # OOO-OO
+    # OPA Ranged address numbers
+    if tokenlen == 3 and tokens[0].isdigit() and tokens[1] == '-' and \
+                    len(tokens[2]) <= 2 and tokens[2].isdigit() and len(tokens[0]) <= 5:
 
         if len(tokens[2]) == 1:
             alowst = tokens[0][-1:]
@@ -991,15 +1015,17 @@ def is_addr(test, ver):
         if len(addr_ret.high) == 1:
             addr_ret.high = '0' + addr_ret.high
         addr_ret.parity = ahighoeb
+        o = 'O' * len(tokens[0])
         if ihigh == -1:
-            addr_ret.addrnum_type = 'NNNN-xx'
+            addr_ret.addrnum_type = o+'-xx'
         else:
-            addr_ret.addrnum_type = 'NNNN-NN'
+            addr_ret.addrnum_type = o+'-OO'
         addr_ret.isaddr = True
 
         return addr_ret
 
     # 925R-35
+    # 415 records with Rs, 11A, 5 Ls, 2 Ss and 1 E
     if (tokenlen == 4 and tokens[0].isdigit() and
                 tokens[2] == '-' and
                 len(tokens[1]) == 1 and
@@ -1056,10 +1082,11 @@ def is_addr(test, ver):
         if len(addr_ret.high) == 1:
             addr_ret.high = '0' + addr_ret.high
         addr_ret.parity = ahighoeb
+        o = 'O' * len(tokens[0])
         if ihigh == -1:
-            addr_ret.addrnum_type = 'NNNNA-xx'
+            addr_ret.addrnum_type = o+tokens[1]+'-xx'
         else:
-            addr_ret.addrnum_type = 'NNNNA-NN'
+            addr_ret.addrnum_type = o+tokens[1]+'-OO'
 
         addr_ret.isaddr = True
 
@@ -1173,30 +1200,7 @@ def is_addr(test, ver):
         addr_ret.addrnum_type = 'NNNN 1/2-NN'
         return addr_ret
 
-    if tokenlen == 1 and tokens[0].isdigit():
-        if int(tokens[0]) % 2 == 0:
-            addr_ret.parity = 'E'
-        else:
-            addr_ret.parity = 'O'
-        # if half:
-        #     tokens.append(' 1/2')
-        # and addess number of zero, return as true but blank it out
-        if tokens[0] == '0' or tokens[0] == '00':
-            addr_ret.low_num = -1
-            addr_ret.high_num = -1
-            addr_ret.parity = 'U'
-            addr_ret.low = ''
-            addr_ret.high = ''
-            addr_ret.isaddr = True
-        else:
-            addr_ret.low_num = int(tokens[0])
-            addr_ret.high_num = -1
-            addr_ret.low = ''.join(tokens)
-            addr_ret.high = ''
-            addr_ret.low = addr_ret.low.lstrip('0')
-            addr_ret.isaddr = True
-        addr_ret.addrnum_type = 'N'
-        return addr_ret
+
 
     # A
     if ver == 2 and tokenlen == 1 and len(tokens[0]) == 1 and tokens[0].isalpha():
@@ -1228,7 +1232,8 @@ def is_addr(test, ver):
             addr_ret.low = tokens[0] + tokens[1]
             addr_ret.high = ''
             addr_ret.addr_suffix = tokens[1]
-            addr_ret.addrnum_type = 'NNAA'
+            n = 'N' * len(tokens[0])
+            addr_ret.addrnum_type = n+tokens[1]
             addr_ret.isaddr = True
     # AANN
     if tokenlen == 2 and tokens[1].isdigit():
@@ -1247,110 +1252,40 @@ def is_addr(test, ver):
 
     #######
     # NNN-NNN
-    #  There are two possible way to look at this pattern
-    # 1.  Ranged address, NNN-NN.  This was the original assumption and explains why the code block is the way it is
-    # 2.  User is requesting all the addresses on the block.  Currently if the range is greater than 90, this pattern
-    # will be treated as a block address lookup
+    #  At this point were assuming the user is specifying and a range of addresses
+    #  We are deprecating support for entering a Range of addresses.  That can be handled in AIS in needed.
+    #  ULRS used to handle Ranges
+    #  We are now treating any range as and OPA ranged address number  1234-1236 Market St == 1234-36 Market St
+
     if tokenlen == 3 and tokens[0].isdigit() and tokens[1] == '-' and tokens[2].isdigit():
-        # only if it looks like a good range
-        if (len(tokens[0]) == len(tokens[2])) and len(tokens[0]) >= 3:
-            ret = 'NN-NN to NNNN-NN'
-            tmp_low = tokens[0]
-            tmp_high = tokens[2]
-            # reverse if low is > high
-            if int(tokens[0]) > int(tokens[2]):
-                if (int(tokens[2]) - int(tokens[0])) < 100:
-                    tmp_low = tokens[2]
-                    tmp_high = tokens[0]
-                    ret = 'NNN-NNN to NNNN-RR'
-                else:
-                    raise ValueError('Bad Address Range: {}'.format(test))
-
-            if int(tokens[0]) % 2 == 0:
-                alowoeb = 'E'
-            else:
-                alowoeb = 'O'
-
-            if int(tokens[2]) % 2 == 0:
-                ahighoeb = 'E'
-            else:
-                ahighoeb = 'O'
-
-            if ahighoeb != alowoeb:
-                ahighoeb = 'B'
-            addr_ret.parity = ahighoeb
-
-            # Block Range Address Number
-            if abs((int(tokens[0]) - int(tokens[2]))) > 90:
-                addr_ret.low_num = int(tmp_low)
-                addr_ret.high_num_full = int(tmp_high)
-                addr_ret.low = tmp_low
-                ihigh = int(tmp_high)
-                addr_ret.high_num = ihigh
-                addr_ret.high = str(ihigh)
-
-                addr_ret.isaddr = True
-                addr_ret.full = test
-                if abs((int(tokens[0]) - int(tokens[2]))) < 100:
-                    addr_ret.addrnum_type = 'BLOCK'
-                else:
-                    addr_ret.addrnum_type = 'BLOCK2'
-                return addr_ret
-
-            addr_ret.low_num = int(tmp_low)
-            addr_ret.high_num_full = int(tmp_high)
-            addr_ret.low = tmp_low
-            ihigh = int(tmp_high[-2:])
-            addr_ret.high_num = ihigh
-            addr_ret.high = str(ihigh)
-            if len(addr_ret.high) == 1:
-                addr_ret.high = '0' + addr_ret.high
-
-            if addr_ret.low_num % 2 == 0:
-                alowoeb = 'E'
-            else:
-                alowoeb = 'O'
-
-            ahighoeb = alowoeb
-            # if addr_ret.high_num_full % 2 == 0:
-            #     ahighoeb = 'E'
-            # else:
-            #     ahighoeb = 'O'
-            # if ahighoeb != alowoeb:
-            #     ahighoeb = 'B'
-
-            addr_ret.parity = ahighoeb
-
-            # it should be a range if it is equal
-            if tmp_low == tmp_high:
-                ret = 'NNN=NNN'
-                addr_ret.high_num_full = -1
-                addr_ret.high_num = -1
-                addr_ret.high = ''
-
-            addr_ret.addrnum_type = ret
+        addr_ret.low_num = int(tokens[0])
+        addr_ret.high_num = int(tokens[2])
+        # low is < high, drop the high
+        if ver != 2 and addr_ret.low_num > addr_ret.high_num:
+            addr_ret.low = tokens[0]
+            addr_ret.high = ''
+            addr_ret.high_num_full = -1
+            addr_ret.high_num = -1
             addr_ret.isaddr = True
+            addr_ret.addrnum_type = 'RangeLow>Hi'
+            return addr_ret
+        elif  (addr_ret.high_num - addr_ret.low_num) >98 :
+            addr_ret.low = tokens[0]
+            addr_ret.high = ''
+            addr_ret.high_num_full = -1
+            addr_ret.high_num = -1
+            addr_ret.isaddr = True
+            addr_ret.addrnum_type = 'Range>98'
+            return addr_ret
+        else:
+            addr_ret.low = tokens[0]
+            addr_ret.high = tokens[2][-2:]
+            addr_ret.high_num_full = int(tokens[2])
+            addr_ret.isaddr = True
+            addr_ret.addrnum_type = 'Range'
             return addr_ret
 
-        # otherwise, leave as is
-        else:
-            addr_ret.low_num = int(tokens[0])
-            addr_ret.high_num = int(tokens[2])
-            # low is < high, drop the high
-            if ver != 2 and addr_ret.low_num > addr_ret.high_num:
-                addr_ret.low = tokens[0]
-                addr_ret.high = ''
-                addr_ret.high_num_full = -1
-                addr_ret.high_num = -1
-                addr_ret.isaddr = True
-                addr_ret.addrnum_type = 'NNN-xxx'
-                return addr_ret
-            else:
-                addr_ret.low = tokens[0]
-                addr_ret.high = tokens[2]
-                addr_ret.isaddr = True
-                addr_ret.addrnum_type = 'NNN-NNN'
-                return addr_ret
+
     # UU-NN
     if tokenlen > 2 and tokens[tokenlen - 2] == '-' and tokens[tokenlen - 1].isdigit():
         if int(tokens[tokenlen - 1]) % 2 == 0:
@@ -1453,13 +1388,6 @@ def name_switch(address):
 
 
 def parse_addr_1(address, item):
-    # Remove ES, WS, NS, SS
-    item = re.sub(' (NS|SS|ES|WS)$', '', item)
-    item = item.replace('UNIT BLK', '1')
-    item = item.replace(' OPP ', ' ')
-    if item.startswith('OPP '):
-        item = item[4:]
-    # tokens = item.split()
 
     tokens = split_lead_numbers_from_alpha_string(item)
     if len(tokens) == 0:
@@ -2087,6 +2015,13 @@ cl_suffix_lookup = create_centerline_street_lookup()
 
 def split_lead_numbers_from_alpha_string(item):
     tokens = item.split()
+
+    #3101 - 3199 S 3RD ST
+    # Not allowing spaces around '-' instead.  see input_cleanup()
+    # if len(tokens)>4 and tokens[1] == '-':
+    #     tokens[0] += '-'+tokens[2]
+    #     tokens.pop(1)
+    #     tokens.pop(1)
 
     i = 0
     for token in tokens:

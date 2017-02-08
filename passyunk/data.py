@@ -77,13 +77,15 @@ class Enum(set):
         raise AttributeError
 
 
-AddrType = Enum(['none',
-                 'address',
-                 'opa_account',
-                 'street',
-                 'intersection_addr',
-                 'block',
-                 'mapreg' ,
-                 'place',
-                 'pobox',
-                 'zipcode'])
+AddrType = Enum(['none',              # Any entry not identified below
+                 'address',           # 1234 MARKET ST
+                 'block',             # 1200 block of Market St
+                 'intersection_addr', # MARKET and 12TH ST
+                 'coord',             # Lat Lon coordinate
+                 'mapreg' ,           # 123N12-1234
+                 'opa_account',       # 123456789
+                 'place',             # CITY HALL
+                 'pobox',             # POBOX 1234
+                 'range',              # 1200 - 1298 Market St
+                 'street',            # MARKET ST
+                 'zipcode'])          # 19125
