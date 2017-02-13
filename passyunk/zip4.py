@@ -5,6 +5,8 @@ import os
 import re
 import sys
 
+from .centerline import get_cl_info
+
 __author__ = 'tom.swanson'
 
 cwd = os.path.dirname(__file__)
@@ -221,12 +223,39 @@ def get_unique_zipcodes(lst):
     return zips
 
 
-def get_zip_info(address, input_):
+def get_zip_info(address, address_uber):
     zlist = is_zip4_base(address.street.full)
     addr_unit = parse_unit_num(address.address_unit.unit_num)
     addr_type = address.address_unit.unit_type
     if addr_type == '#':
         addr_type = ''
+
+    if len(zlist) == 0 and address.mailing.zipcode != '':
+        zlist = is_zip4_name(address.street.name)
+        if len(zlist) > 0:
+            mlist = []
+            for row in zlist:
+                if address.mailing.zipcode == row.zipcode and row.low <= address.address.low_num <= row.high and (
+                                address.address.parity == row.oeb or row.oeb == 'B'):
+                    mlist.append(row)
+
+            if len(mlist) == 0:
+                address.mailing.zip4 = ''
+                return
+            if len(mlist) == 1:
+                address.mailing.zipcode = mlist[0].zipcode
+                address.mailing.zip4 = mlist[0].zip4
+                address.mailing.uspstype = mlist[0].recordtype
+                address.mailing.bldgfirm = mlist[0].buildingorfirm
+                address.street.predir = mlist[0].pre
+                address.street.suffix = mlist[0].suffix
+                address.street.post = mlist[0].post
+                get_cl_info(address, address_uber)
+                address.mailing.matchdesc = 'input zipcode match'
+                return
+
+            elif len(mlist) > 1:
+                return
 
     if len(zlist) > 0:
         mlist = []
@@ -259,7 +288,7 @@ def get_zip_info(address, input_):
                 for m in mlist:
                     if m.unit == '' and m.unitlow.full == '':
 
-                        #use the base zip4, take the first one
+                        # use the base zip4, take the first one
                         if m.recordtype == 'S' and address.mailing.uspstype == '':
                             address.mailing.uspstype = m.recordtype
                             address.mailing.zip4 = m.zip4
@@ -271,7 +300,6 @@ def get_zip_info(address, input_):
                             address.mailing.bldgfirm = m.buildingorfirm
                             address.mailing.uspstype = m.recordtype
                             address.mailing.zip4 = m.zip4
-
 
                 # Make sure the zipzode in the list is unique.  If so, your good, revert otherwise.
                 zips = get_unique_zipcodes(mlist)
@@ -482,11 +510,11 @@ def get_zip_info(address, input_):
                     if len(zips) == 1:
                         address.mailing.zipcode = zips[0]
                         address.mailing.matchdesc = 'MMA_UN_UZ'
-                        #print('multiple matches for address with unit type and number - unique zip :' + input_,
+                        # print('multiple matches for address with unit type and number - unique zip :' + input_,
                         #      file=sys.stderr)
                     else:
                         address.mailing.matchdesc = 'MMA_UN_MUZ'
-                        #print('multiple matches for address with unit type and number multiple unique zip :' + input_,
+                        # print('multiple matches for address with unit type and number multiple unique zip :' + input_,
                         #      file=sys.stderr)
                     return
 
