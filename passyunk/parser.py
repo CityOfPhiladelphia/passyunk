@@ -19,12 +19,12 @@ import re
 import sys
 import warnings
 
-from .parser_addr import parse_addr_1, name_switch, is_centerline_street_name, is_centerline_street_pre, \
-    is_centerline_street_suffix, is_centerline_name, Address
 from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2
 from .data import opa_account_re, zipcode_re, po_box_re, mapreg_re, AddrType, \
     ILLEGAL_CHARS_RE
 from .election import create_election_lookup, get_election_info
+from .parser_addr import parse_addr_1, name_switch, is_centerline_street_name, is_centerline_street_pre, \
+    is_centerline_street_suffix, is_centerline_name, Address
 from .zip4 import create_zip4_lookup, get_zip_info
 
 is_cl_file = False
@@ -37,10 +37,10 @@ class AddressUber:
         self.components = Address()
         self.input_address = ''
         self.type = ''
-       
 
     def __repr__(self):
         return self.__str__()
+
 
 class Nameswitch:
     def __init__(self, row):
@@ -65,7 +65,6 @@ class CenterlineNameOnly:
         self.name = row[0]
         self.low = row[1]
         self.high = row[2]
-
 
 
 '''
@@ -148,6 +147,7 @@ def create_centerline_street_lookup():
     f.close()
     return lookup, lookup_list, lookup_name, lookup_pre, lookup_suffix
 
+
 def create_full_names(address, addr_type):
     if addr_type == AddrType.opa_account or addr_type == AddrType.zipcode:
         return address
@@ -208,6 +208,7 @@ def create_full_names(address, addr_type):
 
     return address
 
+
 def centerline_rematch(address):
     # If only street name provided and there is only one version of the full name...
     # 1234 Berks => 1234 Berks St
@@ -260,12 +261,44 @@ def centerline_rematch(address):
             # street_centerline_lookup, street_centerline_name_lookup,name_lookup,pre_lookup,suffix_lookup
 
 
+# latlon wgs84  Lon -75.0 to - 74 Lat 39 to 40
+# state plane Y - 2,600,000 2,800,000  X - 200,000 to 320,000
+def xy_check(item):
+    tmp = item.strip()
+    tmp = tmp.replace('+', '')
+    tmp = tmp.replace(',', ' ')
+    tmp = ' '.join(tmp.split())
+    tokens = tmp.split(' ')
+    if len(tokens) != 2:
+        return
+
+    try:
+        y = float(tokens[0])
+    except:
+        return
+    try:
+        x = float(tokens[1])
+    except:
+        return
+
+    if y < -74.0 and y > -76.0 and x < 41.0 and x > 39.0:
+        return 'L%.6f,%.6f' % (y, x)
+    elif y < 2800000.0 and y > 2600000.0 and x < 320000.0 and x > 200000.0:
+        return 'S%.6f,%.6f' % (y, x)
+    else:
+        return 'JUNK'
+
+
 def parse(item):
     # address = Addr()
     address_uber = AddressUber()
     address = address_uber.components
+    # latlon_search = latlon_re.search(item)
 
-    item = input_cleanup(address_uber, item)
+    is_xy = xy_check(item)
+
+    if not is_xy:
+        item = input_cleanup(address_uber, item)
 
     if item == '':
         address_uber.type = AddrType.none
@@ -276,15 +309,28 @@ def parse(item):
     opa_account_search = opa_account_re.search(item)
     regmap_search = mapreg_re.search(item)
     zipcode_search = zipcode_re.search(item)
-
     po_box_search = po_box_re.search(item)
 
-    if len(item) == 9 and opa_account_search:
+    if is_xy:
+        address_uber.input_address = item
+        if is_xy[0] == 'L':
+            address_uber.type = AddrType.latlon
+            address_uber.components.output_address = is_xy[1:]
+        elif is_xy[0] == 'S':
+            address_uber.type = AddrType.stateplane
+            address_uber.components.output_address = is_xy[1:]
+        else:
+            address_uber.type = AddrType.none
+
+    elif len(item) == 9 and opa_account_search:
         address_uber.components.output_address = item
         address_uber.type = AddrType.opa_account
 
+
+
+
     elif (len(item) == 10 or len(item) == 11) and regmap_search:
-        address_uber.components.output_address = item.replace('-','')
+        address_uber.components.output_address = item.replace('-', '')
         address_uber.type = AddrType.mapreg
 
     elif len(item) == 5 and zipcode_search:
@@ -317,7 +363,7 @@ def parse(item):
         address.street.name = 'PO BOX {}'.format(num)
 
     else:
-#######################################################################################################################
+        #######################################################################################################################
 
         address = parse_addr_1(address, item)
         if address.street.parse_method == 'UNK':
@@ -326,7 +372,8 @@ def parse(item):
         else:
             if address.address.isaddr and address_uber.type != AddrType.block:
                 if address.address.addrnum_type == 'RANGE':
-                    address_uber.type = AddrType.range
+                    # address_uber.type = AddrType.range  leaving in case we revisit this logic
+                    address_uber.type = AddrType.address
                 else:
                     address_uber.type = AddrType.address
                 if address.street.name == '':
@@ -339,7 +386,6 @@ def parse(item):
 
     if address_uber.type == AddrType.address and not address_uber.components.street.is_centerline_match:
         centerline_rematch(address.street)
-
 
     if address_uber.type == AddrType.intersection_addr:
         centerline_rematch(address.street)
@@ -359,7 +405,7 @@ def parse(item):
         # if the users doesn't have the zip4 file, parser will still work
 
         if is_zip_file:
-            get_zip_info(address, address_uber.input_address)
+            get_zip_info(address, address_uber)
             create_full_names(address, address_uber.type)
 
         # important that full names are created before adding election
@@ -379,6 +425,8 @@ def parse(item):
         address_uber.components.output_address = address.base_address
     elif address_uber.type != AddrType.opa_account and \
                     address_uber.type != AddrType.mapreg and \
+                    address_uber.type != AddrType.latlon and \
+                    address_uber.type != AddrType.stateplane and \
                     address_uber.type != AddrType.zipcode:
         if address.address_unit.unit_num != -1:
             address_uber.components.output_address = address.base_address + ' ' + \
@@ -397,7 +445,6 @@ def parse(item):
 
     if address_uber.type == AddrType.street and address.street.street_code == '':
         address_uber.type = AddrType.none
-
 
     temp_centerline = is_centerline_name(address_uber.components.street_2.full)
     if temp_centerline.full != '0':
@@ -500,8 +547,6 @@ def parse(item):
     if address_uber.type == '':
         address_uber.type = None
 
-
-
     return address_uber
 
 
@@ -529,7 +574,7 @@ def input_cleanup(address_uber, item):
     item = item.replace('/', ' AND ')
     item = item.replace('@', ' AND ')
     item = item.replace(' AT ', ' AND ')
-    item = item.replace(' UNIT UNIT', ' UNIT ')  #yes this is common
+    item = item.replace(' UNIT UNIT', ' UNIT ')  # yes this is common
     item = item.replace('1 AND 2', ' 1/2 ')
     item = item.replace(' - ', '-')
     item = item.replace(' -', '-')

@@ -681,7 +681,7 @@ def handle_units(tokens, unit):
             tokens.pop()
             tokens.pop()
             #  3101 S 3RD ST # 0000  - there are systems that treat no unit num with 0000
-            if unit.unit_type == '#' and unit.unit_num.replace('0','') == '':
+            if unit.unit_type == '#' and unit.unit_num.replace('0', '') == '':
                 unit.unit_type = ''
                 unit.unit_num = ''
             return [-1, '']
@@ -1017,9 +1017,9 @@ def is_addr(test, ver):
         addr_ret.parity = ahighoeb
         o = 'O' * len(tokens[0])
         if ihigh == -1:
-            addr_ret.addrnum_type = o+'-xx'
+            addr_ret.addrnum_type = o + '-xx'
         else:
-            addr_ret.addrnum_type = o+'-OO'
+            addr_ret.addrnum_type = o + '-OO'
         addr_ret.isaddr = True
 
         return addr_ret
@@ -1084,9 +1084,9 @@ def is_addr(test, ver):
         addr_ret.parity = ahighoeb
         o = 'O' * len(tokens[0])
         if ihigh == -1:
-            addr_ret.addrnum_type = o+tokens[1]+'-xx'
+            addr_ret.addrnum_type = o + tokens[1] + '-xx'
         else:
-            addr_ret.addrnum_type = o+tokens[1]+'-OO'
+            addr_ret.addrnum_type = o + tokens[1] + '-OO'
 
         addr_ret.isaddr = True
 
@@ -1200,8 +1200,6 @@ def is_addr(test, ver):
         addr_ret.addrnum_type = 'NNNN 1/2-NN'
         return addr_ret
 
-
-
     # A
     if ver == 2 and tokenlen == 1 and len(tokens[0]) == 1 and tokens[0].isalpha():
         # if half:
@@ -1233,7 +1231,7 @@ def is_addr(test, ver):
             addr_ret.high = ''
             addr_ret.addr_suffix = tokens[1]
             n = 'N' * len(tokens[0])
-            addr_ret.addrnum_type = n+tokens[1]
+            addr_ret.addrnum_type = n + tokens[1]
             addr_ret.isaddr = True
     # AANN
     if tokenlen == 2 and tokens[1].isdigit():
@@ -1269,7 +1267,7 @@ def is_addr(test, ver):
             addr_ret.isaddr = True
             addr_ret.addrnum_type = 'RangeLow>Hi'
             return addr_ret
-        elif  (addr_ret.high_num - addr_ret.low_num) >98 :
+        elif (addr_ret.high_num - addr_ret.low_num) > 98:
             addr_ret.low = tokens[0]
             addr_ret.high = ''
             addr_ret.high_num_full = -1
@@ -1284,7 +1282,6 @@ def is_addr(test, ver):
             addr_ret.isaddr = True
             addr_ret.addrnum_type = 'Range'
             return addr_ret
-
 
     # UU-NN
     if tokenlen > 2 and tokens[tokenlen - 2] == '-' and tokens[tokenlen - 1].isdigit():
@@ -1388,8 +1385,33 @@ def name_switch(address):
 
 
 def parse_addr_1(address, item):
-
     tokens = split_lead_numbers_from_alpha_string(item)
+
+    if len(tokens) > 3 and tokens[0].isdigit() and (tokens[1] == 'BL' or
+                                                            tokens[1] == 'BK' or
+                                                            tokens[1] == 'BLFK' or
+                                                            tokens[1] == 'BLKK' or
+                                                            tokens[1] == 'BLKN' or
+                                                            tokens[1] == 'BLOCKS' or
+                                                            tokens[1] == 'LK' or
+                                                            tokens[1] == 'LOT' or
+                                                            tokens[1] == 'BLKE'):
+        tokens.pop(1)
+
+    if len(tokens) > 3 and tokens[1].isdigit() and (tokens[0] == 'OP' or
+                                                            tokens[1] == 'OPPS' or
+                                                            tokens[1] == 'OPT'):
+        tokens.pop(0)
+    # 1600 John F kennedy bl
+    # Need a better solution
+    if len(tokens) > 3 and len(tokens) < 6 \
+            and tokens[0].isdigit() and tokens[len(tokens) - 1] == 'BL':
+        tokens[len(tokens) - 1] = 'BLVD'
+
+    # 1600 John F kennedy bl, 19122
+    if len(tokens) > 4 and len(tokens) < 7 and tokens[0].isdigit() and tokens[len(tokens) - 2] == 'BL':
+        tokens[len(tokens) - 2] = 'BLVD'
+
     if len(tokens) == 0:
         return address
 
@@ -2014,9 +2036,10 @@ cl_suffix_lookup = create_centerline_street_lookup()
 
 
 def split_lead_numbers_from_alpha_string(item):
+    item = item.replace(',', ' ')
     tokens = item.split()
 
-    #3101 - 3199 S 3RD ST
+    # 3101 - 3199 S 3RD ST
     # Not allowing spaces around '-' instead.  see input_cleanup()
     # if len(tokens)>4 and tokens[1] == '-':
     #     tokens[0] += '-'+tokens[2]
