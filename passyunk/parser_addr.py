@@ -1973,7 +1973,7 @@ def parse_addr_1(address, item):
             address.street.parse_method = '5APNNSx'
             return address
 
-        if token_len > 4:
+    if token_len > 4:
         pre_dir = is_dir(tokens[0])
         suffix = issuffix(tokens[2])
         if pre_dir.std != '0' and suffix.std != '0':
