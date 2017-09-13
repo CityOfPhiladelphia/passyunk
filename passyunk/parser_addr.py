@@ -1973,6 +1973,54 @@ def parse_addr_1(address, item):
             address.street.parse_method = '5APNNSx'
             return address
 
+        if token_len > 4:
+        pre_dir = is_dir(tokens[0])
+        suffix = issuffix(tokens[2])
+        if pre_dir.std != '0' and suffix.std != '0':
+            address.street.predir = pre_dir.correct
+            address.street.name = ' '.join(name_std(tokens[1:2], True))
+            address.street.suffix = suffix.correct
+            address.street.parse_method = '6ADNSx'
+            return address
+
+    if token_len > 3:
+        pre_dir = is_dir(tokens[0])
+        suffix = issuffix(tokens[1])
+        if pre_dir.std == '0' and suffix.std != '0':
+            address.street.predir = ''
+            address.street.name = ' '.join(name_std(tokens[0:1], True))
+            address.street.suffix = suffix.correct
+            address.street.parse_method = '6ANSx'
+            return address
+
+    if token_len > 5:
+        pre_dir = is_dir(tokens[0])
+        suffix = issuffix(tokens[3])
+        if pre_dir.std != '0' and suffix.std != '0':
+            address.street.predir = pre_dir.correct
+            address.street.name = ' '.join(name_std(tokens[2:4], True))
+            address.street.suffix = suffix.correct
+            address.street.parse_method = '6ADNNSx'
+            return address
+
+    if token_len > 4:
+        pre_dir = is_dir(tokens[0])
+        suffix = issuffix(tokens[2])
+        suffix2 = issuffix(tokens[3])
+        if pre_dir.std == '0' and suffix.std != '0':
+            address.street.predir = ''
+            address.street.name = ' '.join(name_std(tokens[1:2], True))
+            address.street.suffix = suffix.correct
+            address.street.parse_method = '6ANNSx'
+            return address
+        #00740 S CHRIS COLUMBUS BLV 30
+        if pre_dir.std != '0' and suffix2.std != '0':
+            address.street.predir = pre_dir.correct
+            address.street.name = ' '.join(name_std(tokens[1:3], True))
+            address.street.suffix = suffix2.correct
+            address.street.parse_method = '6APNNSx'
+            return address
+    
     # raise error at this point
     address.street.parse_method = 'TODO'
     address.street.name = ' '.join(name_std(tokens, True))
