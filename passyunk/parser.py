@@ -289,7 +289,7 @@ def xy_check(item):
         return 'JUNK'
 
 
-def parse(item):
+def parse(item, MAX_RANGE):
     # address = Addr()
     address_uber = AddressUber()
     address = address_uber.components
@@ -325,9 +325,6 @@ def parse(item):
     elif len(item) == 9 and opa_account_search:
         address_uber.components.output_address = item
         address_uber.type = AddrType.opa_account
-
-
-
 
     elif (len(item) == 10 or len(item) == 11) and regmap_search:
         address_uber.components.output_address = item.replace('-', '')
@@ -398,7 +395,7 @@ def parse(item):
 
     # if the users doesn't have the centerline file, parser will still work
     if is_cl_file:
-        get_cl_info(address, address_uber)
+        get_cl_info(address, address_uber, MAX_RANGE)
         if address_uber.type == 'intersection_addr':
             get_cl_info_street2(address)
 
@@ -629,11 +626,12 @@ if not is_election_file:
 
 
 class PassyunkParser:
-    def __init__(self, return_dict=True):
+    def __init__(self, return_dict=True, MAX_RANGE=200):
         self.return_dict = return_dict
+        self.MAX_RANGE = MAX_RANGE
 
     def parse(self, addr_str):
-        parsed_out = parse(addr_str)
+        parsed_out = parse(addr_str, self.MAX_RANGE)
 
         if self.return_dict:
             # Hack to make nested addrnum a dict as well

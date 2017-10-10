@@ -13,7 +13,7 @@ cwd += '/pdata'
 # cwd = cwd.replace('\\','/')
 cl_file = 'centerline'
 
-MAX_RANGE = 200
+# MAX_RANGE = 200
 
 # cfout = open(os.path.dirname(__file__)+'/sandbox/fuzzyout.csv', 'w')
 # print(Levenshtein.ratio('BREAD', 'BROAD'))
@@ -209,7 +209,7 @@ def is_cl_name(test):
     return cl_list[name.low:name.high]
 
 
-def get_cl_info(address, addr_uber):
+def get_cl_info(address, addr_uber, MAX_RANGE):
     addr_low_num = address.address.low_num
     addr_parity = address.address.parity
 
