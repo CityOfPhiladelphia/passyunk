@@ -455,7 +455,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
             address.street.name = options[0][0]
             address.street.score = tie + str(options[0][1])
 
-            get_cl_info(address, addr_uber)
+            get_cl_info(address, addr_uber, MAX_RANGE)
             return
 
 # simple method for adding street_code to street_2
