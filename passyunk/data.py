@@ -90,4 +90,5 @@ AddrType = Enum(['none',  # Any entry not identified below
                  'latlon',  # Lat/Lon wgs84
                  'stateplane',  # NAD_1983_StatePlane_Pennsylvania_South_FIPS_3702_Feet
                  'street',  # MARKET ST
-                 'zipcode'])  # 19125
+                 'zipcode',
+                 'landmark'])  # 19125
