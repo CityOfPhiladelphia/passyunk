@@ -26,6 +26,7 @@ from .election import create_election_lookup, get_election_info
 from .parser_addr import parse_addr_1, name_switch, is_centerline_street_name, is_centerline_street_pre, \
     is_centerline_street_suffix, is_centerline_name, Address
 from .zip4 import create_zip4_lookup, get_zip_info
+from .landmark import Landmark
 
 is_cl_file = False
 is_election_file = False
@@ -288,34 +289,12 @@ def xy_check(item):
     else:
         return 'JUNK'
 
-# Implement fuzzy matching
-def landmark_check(item):
-    tmp = item.strip()
-    path = csv_path('landmarks')
-    f = open(path, 'r')
-    try:
-        reader = csv.reader(f)
-        laddress = ''
-        for row in reader:
-            lname = row[0]
-            if tmp.lower() == lname.lower():
-                laddress = row[1]
-                break
-        return laddress
-    except IOError:
-        print('Error opening ' + path, sys.exc_info()[0])
-    f.close()
-
-
 def parse(item, MAX_RANGE):
     # address = Addr()
     address_uber = AddressUber()
     address = address_uber.components
     # latlon_search = latlon_re.search(item)
-
     is_xy = xy_check(item)
-    is_landmark = False
-
     if not is_xy:
         item = input_cleanup(address_uber, item)
 
@@ -329,7 +308,7 @@ def parse(item, MAX_RANGE):
     regmap_search = mapreg_re.search(item)
     zipcode_search = zipcode_re.search(item)
     po_box_search = po_box_re.search(item)
-    landmark_addr = landmark_check(item)
+    landmark = Landmark(item)
 
     if is_xy:
         address_uber.input_address = item
@@ -380,8 +359,8 @@ def parse(item, MAX_RANGE):
         address.street.name = 'PO BOX {}'.format(num)
 
     else:
-        if landmark_addr:
-            item = landmark_addr
+    #     if landmark_addr:
+    #         item = landmark_addr
         #######################################################################################################################
 
         address = parse_addr_1(address, item)
@@ -397,9 +376,14 @@ def parse(item, MAX_RANGE):
                     address_uber.type = AddrType.address
                 if address.street.name == '':
                     raise ValueError('Parsed address does not have a street name: {}'.format(item))
-
             elif address_uber.type != AddrType.block:
-                address_uber.type = AddrType.street
+                landmark.landmark_check()
+                if landmark.is_landmark:
+                    item = landmark.landmark_address
+                    address = parse_addr_1(address, item)
+                    address_uber.type = AddrType.address
+                else:
+                    address_uber.type = AddrType.street
 
     name_switch(address)
 
@@ -565,7 +549,7 @@ def parse(item, MAX_RANGE):
         address_uber.components.output_address = None
     if address_uber.type == '':
         address_uber.type = None
-    if landmark_addr:
+    if landmark.is_landmark:
         address_uber.type = AddrType.landmark
     return address_uber
 
