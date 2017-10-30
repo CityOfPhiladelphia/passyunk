@@ -377,6 +377,7 @@ def parse(item, MAX_RANGE):
                 if address.street.name == '':
                     raise ValueError('Parsed address does not have a street name: {}'.format(item))
             elif address_uber.type != AddrType.block:
+                # print(1)
                 landmark.landmark_check()
                 if landmark.is_landmark:
                     item = landmark.landmark_address

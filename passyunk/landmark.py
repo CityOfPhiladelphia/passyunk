@@ -1,5 +1,10 @@
 import os, sys
 import csv
+import re
+import string
+from fuzzywuzzy import process
+from .namestd import StandardName
+
 
 class Landmark:
     def __init__(self, item):
@@ -12,21 +17,30 @@ class Landmark:
         cwd += '/pdata'
         return os.path.join(cwd, file_name + '.csv')
 
-    def landmark_check(self):
-        tmp = self.item.strip()
+    def list_landmarks(self):
         path = self.csv_path('landmarks')
-        f = open(path, 'r')
+        landmark_dict = {}
         try:
-            reader = csv.reader(f)
-            landmark_address = ''
-            for row in reader:
-                landmark_name = row[0]
-                if tmp.lower() == landmark_name.lower():
-                    landmark_address = row[1]
-                    break
-            self.is_landmark = True if landmark_address else False
-            self.landmark_address = landmark_address
-            # return laddress
+            with open(path, 'r') as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    lname = row[0].lower()
+                    landmark_dict[lname] = row[1]
         except IOError:
             print('Error opening ' + path, sys.exc_info()[0])
-        f.close()
+        return landmark_dict
+
+    def landmark_check(self):
+        tmp = self.item.strip()
+        # Name standardization:
+        tmp_list = re.sub('[' + string.punctuation + ']', '', tmp).split()
+        std = StandardName(tmp_list, False).output
+        tmp =  ' '.join(std)
+        # Fuzzy matching:
+        landmark_dict = self.list_landmarks()
+        landmark_list = [x.lower()[1:] for x in landmark_dict.keys()]
+        result = process.extract(tmp.lower()[1:],landmark_list,limit=1)
+        lname = tmp[0].lower() + result[0][0]
+        landmark_address = landmark_dict[lname] if result[0][1] > 95 else ''
+        self.is_landmark = True if landmark_address else False
+        self.landmark_address = landmark_address

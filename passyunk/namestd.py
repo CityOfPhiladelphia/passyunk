@@ -132,6 +132,6 @@ class StandardName:
 
         return temp
 
-test = ['1234', 'MKT', 'ST']
-std = StandardName(test, False).output
-print(std)
+# test = ['1234', 'MKT', 'ST']
+# std = StandardName(test, False).output
+# print(std)
