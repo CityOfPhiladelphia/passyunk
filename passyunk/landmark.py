@@ -40,7 +40,7 @@ class Landmark:
         tmp_list = re.sub('[' + string.punctuation + ']', '', tmp).split()
         std = StandardName(tmp_list, False).output
         # Don't match on 'the' if first word
-        tmp = ' '.join(std[1:]) if std[0].lower() == 'the' else ' '.join(std)
+        tmp = ' '.join(std[1:]) if std[0].lower() in ('the', 'teh') else ' '.join(std)
         # Fuzzy matching:
         landmark_dict = self.list_landmarks()
         landmark_list = [x.lower()[1:] for x in landmark_dict.keys()]
