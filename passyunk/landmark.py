@@ -24,7 +24,11 @@ class Landmark:
             with open(path, 'r') as f:
                 reader = csv.reader(f)
                 for row in reader:
-                    lname = row[0].lower()
+                    # Don't match on 'the' as first word
+                    rlist = row[0].split()
+                    rlist = rlist[1:] if rlist[0].lower() == 'the' else rlist
+                    # lname = row[0].lower()
+                    lname = ' '.join(rlist).lower()
                     landmark_dict[lname] = row[1]
         except IOError:
             print('Error opening ' + path, sys.exc_info()[0])
@@ -35,12 +39,15 @@ class Landmark:
         # Name standardization:
         tmp_list = re.sub('[' + string.punctuation + ']', '', tmp).split()
         std = StandardName(tmp_list, False).output
-        tmp =  ' '.join(std)
+        # Don't match on 'the' if first word
+        tmp = ' '.join(std[1:]) if std[0].lower() == 'the' else ' '.join(std)
         # Fuzzy matching:
         landmark_dict = self.list_landmarks()
         landmark_list = [x.lower()[1:] for x in landmark_dict.keys()]
-        result = process.extract(tmp.lower()[1:],landmark_list,limit=1)
-        lname = tmp[0].lower() + result[0][0]
-        landmark_address = landmark_dict[lname] if result[0][1] > 95 else ''
+        results = process.extract(tmp.lower()[1:], landmark_list, limit=3)
+        results = sorted(results, key=lambda r: r[1], reverse=True)
+        # print(results)
+        lname = tmp[0].lower() + results[0][0]
+        landmark_address = landmark_dict[lname] if results[0][1] > 85 else ''
         self.is_landmark = True if landmark_address else False
         self.landmark_address = landmark_address
