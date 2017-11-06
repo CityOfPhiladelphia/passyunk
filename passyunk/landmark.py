@@ -51,11 +51,13 @@ class Landmark:
             first_letter = tmp[0]
         except:
             first_letter = ''
+
         landmark_dict = self.list_landmarks(first_letter)
         landmark_list = [x for x in landmark_dict.keys()]
         results = process.extract(tmp, landmark_list, limit=3)
         results = sorted(results, key=lambda r: r[1], reverse=True)
         try:
+            results = [] if results[0][1] == results[1][1] else results
             lname = results[0][0]
             landmark_address = landmark_dict[lname] if results[0][1] > 89 else ''
             self.is_landmark = True if landmark_address else False
