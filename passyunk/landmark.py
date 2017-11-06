@@ -64,6 +64,5 @@ class Landmark:
             self.landmark_address = landmark_address
             self.landmark_name = lname
         except:
-            print("error: ", results)
             pass
 
