@@ -346,7 +346,6 @@ def parse(item, MAX_RANGE):
         if tokens[1] == 'LI':
             address_uber.type = AddrType.address
         else:
-
             address2 = Address()
             address2 = parse_addr_1(address2, tokens[1])
             address.street_2 = address2.street
@@ -377,14 +376,7 @@ def parse(item, MAX_RANGE):
                 if address.street.name == '':
                     raise ValueError('Parsed address does not have a street name: {}'.format(item))
             elif address_uber.type != AddrType.block:
-                # print(1)
-                landmark.landmark_check()
-                if landmark.is_landmark:
-                    item = landmark.landmark_address
-                    address = parse_addr_1(address, item)
-                    address_uber.type = AddrType.address
-                else:
-                    address_uber.type = AddrType.street
+                address_uber.type = AddrType.street
 
     name_switch(address)
 
@@ -397,6 +389,16 @@ def parse(item, MAX_RANGE):
 
     if address_uber.components.cl_seg_id != '':
         address_uber.components.street.is_centerline_match = True
+
+    # check if landmark if address_uber.type = none, street or = intersection_addr with at least one non-matching streets
+    if address_uber.type in (AddrType.street, AddrType.none) or (address_uber.type == AddrType.intersection_addr and (
+            address_uber.components.street.is_centerline_match == False or address_uber.components.street_2.is_centerline_match == False)):
+        landmark.landmark_check()
+        if landmark.is_landmark:
+            item = landmark.landmark_address
+            address = parse_addr_1(address, item)
+            # Hack to process address steps below:
+            address_uber.type = AddrType.address
 
     create_full_names(address, address_uber.type)
 
@@ -550,6 +552,7 @@ def parse(item, MAX_RANGE):
         address_uber.components.output_address = None
     if address_uber.type == '':
         address_uber.type = None
+    # Hack to set type back to landmark:
     if landmark.is_landmark:
         address_uber.type = AddrType.landmark
     return address_uber
