@@ -235,7 +235,6 @@ def get_midpoint_geom(address):
 def get_full_range_geom(address, match):
     addr_low_num = address.address.low_num
     cl_shape = loads(address.street.shape)
-    print(cl_shape)
     f_l = match.from_left
     f_r = match.from_right
     t_l = match.to_left
@@ -264,7 +263,6 @@ def get_intersection_geom(address):
 
 def get_address_geom(address, addr_uber, match):
     type = addr_uber.type
-    print(type)
     if type == 'street':
         get_midpoint_geom(address)
     elif type == 'address':
