@@ -227,7 +227,7 @@ def interpolate_line(line, distance_ratio, _buffer):
 
 def get_midpoint_geom(address):
     cl_shape = loads(address.street.shape)
-    geom = loads(cl_shape).centroid
+    geom = cl_shape.centroid
     geom = mapping(geom)
     address.geometry = geom
 
@@ -235,6 +235,7 @@ def get_midpoint_geom(address):
 def get_full_range_geom(address, match):
     addr_low_num = address.address.low_num
     cl_shape = loads(address.street.shape)
+    print(cl_shape)
     f_l = match.from_left
     f_r = match.from_right
     t_l = match.to_left
@@ -263,9 +264,9 @@ def get_intersection_geom(address):
 
 def get_address_geom(address, addr_uber, match):
     type = addr_uber.type
+    print(type)
     if type == 'street':
         get_midpoint_geom(address)
-        pass
     elif type == 'address':
         get_full_range_geom(address, match)
     elif type == 'intersection_addr':
@@ -349,13 +350,13 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
             addr_uber.type = 'street'
             address.street.street_code = cl.street_code
             address.street.shape = cl.shape
+            address.geometry = get_address_geom(address, addr_uber, cl)
             address.cl_addr_match = 'MATCH TO STREET. ADDR NUMBER NO MATCH'
             return
 
         # Exact Match
         if len(matches) == 1:
             match = matches[0]
-            print(match)
             address.street.street_code = match.street_code
             address.street.shape = match.shape
             address.cl_seg_id = match.cl_seg_id
