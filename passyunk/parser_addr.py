@@ -40,6 +40,7 @@ class Street:
         self.parse_method = ''
         self.is_centerline_match = False
         self.score = None
+        self.shape = ''
 
 
 class AddressUber:
@@ -66,6 +67,7 @@ class Address:
         self.cl_seg_id = ''
         self.cl_responsibility = ''
         self.cl_addr_match = ''
+        self.geometry = {}
 
     def __str__(self):
         return 'Address: {}'.format(self.output_address)

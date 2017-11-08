@@ -543,6 +543,8 @@ def parse(item, MAX_RANGE):
         address_uber.components.output_address = None
     if address_uber.type == '':
         address_uber.type = None
+    del address_uber.components.street.shape
+    del address_uber.components.street_2.shape
 
     return address_uber
 
