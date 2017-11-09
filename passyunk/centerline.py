@@ -16,7 +16,7 @@ cwd += '/pdata'
 cl_file = 'centerline_shape'
 int_file = 'intersections'
 full_range_buffer = 17
-centerline_offset = 8
+centerline_offset = 5
 # MAX_RANGE = 200
 
 # cfout = open(os.path.dirname(__file__)+'/sandbox/fuzzyout.csv', 'w')
