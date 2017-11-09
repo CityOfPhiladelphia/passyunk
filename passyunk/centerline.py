@@ -36,9 +36,9 @@ for x in range(0, 26):
 
 class Intersection:
     def __init__(self, int_row):
-        self.street_1_code = int_row[4].strip()
-        self.street_2_code = int_row[10].strip()
-        self.shape = int_row[14].strip()
+        self.street_1_code = int_row[0].strip()
+        self.street_2_code = int_row[1].strip()
+        self.shape = int_row[2].strip()
 
 class Centerline:
     def __init__(self, row):
