@@ -292,10 +292,18 @@ def offset(line, point, distance, seg_side):
     return Point([x, y])
 
 
-def get_midpoint_geom(address):
+def get_midpoint_geom(address, match):
     cl_shape = loads(address.street.shape)
-    geom = cl_shape.centroid
-    geom = mapping(geom)
+    xy = cl_shape.centroid
+    addr_low_num = address.address.low_num
+    # apply offset only if there's an addr_low_num
+    if addr_low_num != -1:
+        f_r = match.from_right
+        seg_side = "R" if f_r % 2 == addr_low_num % 2 else "L"
+        xy_offset = offset(cl_shape, xy, centerline_offset, seg_side)
+        geom = mapping(xy_offset)
+    else:
+        geom = mapping(xy)
     address.geometry = geom
 
 
@@ -342,7 +350,7 @@ def get_int_geom(address):
 def get_address_geom(address, addr_uber, match):
     type = addr_uber.type
     if type == 'street':
-        get_midpoint_geom(address)
+        get_midpoint_geom(address, match)
     elif type == 'address':
         get_full_range_geom(address, match)
     elif type == 'intersection_addr':
