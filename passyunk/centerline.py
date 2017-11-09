@@ -14,6 +14,7 @@ cwd = os.path.dirname(__file__)
 cwd += '/pdata'
 # cwd = cwd.replace('\\','/')
 cl_file = 'centerline_shape'
+int_file = 'intersections'
 full_range_buffer = 17
 # MAX_RANGE = 200
 
@@ -33,6 +34,11 @@ cl_name_fw = []
 for x in range(0, 26):
     cl_name_fw.append([x])
 
+class Intersection:
+    def __init__(self, int_row):
+        self.street_1_code = int_row[4].strip()
+        self.street_2_code = int_row[10].strip()
+        self.shape = int_row[14].strip()
 
 class Centerline:
     def __init__(self, row):
@@ -77,13 +83,15 @@ class NameFW:
 class ShapeOnly:
     def __init__(self, row):
         self.shape = row[11]
-def test_cl_file():
-    path = csv_path(cl_file)
+
+
+def test_file(file):
+    path = csv_path(file)
     return os.path.isfile(path)
 
 
 def create_cl_lookup():
-    is_cl_file = test_cl_file()
+    is_cl_file = test_file(cl_file)
     if not is_cl_file:
         return False
     path = csv_path(cl_file)
@@ -253,12 +261,21 @@ def get_full_range_geom(address, match):
     address.geometry = geom
 
 
-def get_intersection_geom(address):
-    geom1 = loads(address.street.shape)
-    geom2 = loads(address.street.shape_2)
-    geom = geom1.intersection(geom2)
-    geom = mapping(geom)
-    address.geometry = geom
+def get_int_geom(address):
+    street_1_code = min(int(address.street.street_code), int(address.street_2.street_code))
+    street_2_code = max(int(address.street.street_code), int(address.street_2.street_code))
+    is_int_file = test_file(int_file)
+    if not is_int_file:
+        return False
+    path = csv_path(int_file)
+    with open(path) as infile:
+        reader = csv.reader(infile)
+        next(reader, None)
+        for row in reader:
+            intersection = Intersection(row)
+            if int(intersection.street_1_code) == street_1_code and int(intersection.street_2_code) == street_2_code:
+                geom = mapping(loads(intersection.shape))
+                address.geometry = geom
 
 
 def get_address_geom(address, addr_uber, match):
@@ -268,7 +285,8 @@ def get_address_geom(address, addr_uber, match):
     elif type == 'address':
         get_full_range_geom(address, match)
     elif type == 'intersection_addr':
-        get_intersection_geom(address)
+        if address.street.street_code and address.street_2.street_code:
+            get_int_geom(address)
     else:
         pass
     return address.geometry
@@ -277,7 +295,6 @@ def get_address_geom(address, addr_uber, match):
 def get_cl_info(address, addr_uber, MAX_RANGE):
     addr_low_num = address.address.low_num
     addr_parity = address.address.parity
-
     # Get matching centerlines based on street name
     centerlines = is_cl_base(address.street.full)
 
@@ -326,13 +343,13 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                     cur_closest_offset = abs(addr_low_num - to_right)
                     cur_closest = cl
                     cur_closest_addr = to_right
-
         if len(matches) == 0:
             # good street name but no matching address range
             if addr_low_num == -1 and cur_closest is not None:
                 address.street.street_code = cur_closest.street_code
                 address.street.shape = cur_closest.shape
                 address.street.is_centerline_match = True
+                address.geometry = get_address_geom(address, addr_uber, cur_closest)
                 return
 
             if cur_closest_offset is not None and cur_closest_offset < MAX_RANGE:
@@ -534,7 +551,6 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
 
 # simple method for adding street_code to street_2
 def get_cl_info_street2(address):
-
     # Get matching centerlines based on street name
     centerlines = is_cl_base(address.street_2.full)
 
@@ -542,5 +558,6 @@ def get_cl_info_street2(address):
     if len(centerlines) > 0:
         address.street_2.street_code = centerlines[0].street_code
         address.street_2.shape = centerlines[0].shape
+        get_int_geom(address)
         return
 
