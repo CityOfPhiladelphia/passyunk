@@ -19,7 +19,7 @@ class Landmark:
         return os.path.join(cwd, file_name + '.csv')
 
     def list_landmarks(self, first_letter):
-        path = self.csv_path('standardized_landmarks')
+        path = self.csv_path('landmarks')
         landmark_dict = {}
         try:
             with open(path, 'r') as f:
