@@ -62,7 +62,7 @@ class Landmark:
             results = [] if results[0][1] == results[1][1] else results
             lname = results[0][0]
             landmark_addresses = landmark_dict[lname]
-            # Currently only handle unique named landmarks
+            # Currently only handle uniquely named landmarks
             landmark_address = landmark_addresses[0] if results[0][1] > 89 and len(landmark_addresses) == 1 else ''
             self.is_landmark = True if landmark_address else False
             self.landmark_address = landmark_address
