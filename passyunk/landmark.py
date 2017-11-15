@@ -31,7 +31,9 @@ class Landmark:
                     lname = ' '.join(rlist)
                     if lname[0] != first_letter:
                         continue
-                    landmark_dict[lname] = row[1]
+                    if not lname in landmark_dict:
+                        landmark_dict[lname] = []
+                    landmark_dict[lname].append(row[1])
         except IOError:
             print('Error opening ' + path, sys.exc_info()[0])
         return landmark_dict
@@ -59,7 +61,9 @@ class Landmark:
         try:
             results = [] if results[0][1] == results[1][1] else results
             lname = results[0][0]
-            landmark_address = landmark_dict[lname] if results[0][1] > 89 else ''
+            landmark_addresses = landmark_dict[lname]
+            # Currently only handle unique named landmarks
+            landmark_address = landmark_addresses[0] if results[0][1] > 89 and len(landmark_addresses) == 1 else ''
             self.is_landmark = True if landmark_address else False
             self.landmark_address = landmark_address
             self.landmark_name = lname
