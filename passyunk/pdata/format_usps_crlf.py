@@ -298,8 +298,7 @@ with open(zip4_outfile_path, 'w', newline='') as csvfile:
         writer.writerow(row)
 
 mapping = OrderedDict([
-        ('zipcode',	'zipcode'),
-        ('recordtype', 'recordtype'),
+        ('base', 'basealt'),
         ('pre','streetpre'),
         ('name', 'streetname'),
         ('suffix', 'streetsuff'),
@@ -307,13 +306,14 @@ mapping = OrderedDict([
         ('low', 'addrlow'),
         ('high', 'addrhigh'),
         ('oeb', 'addroeb'),
-        ('buildingorfirm', 'buildingorfirm'),
         ('unit', 'addrsecondaryabbr'),
         ('unitlow', 'addrsecondarylow'),
         ('unithigh', 'addrsecondaryhigh'),
         ('unitoeb', 'adrsecondaryoeb'),
-        ('zip4', 'zip4low'),
-        ('base', 'basealt')
+        ('buildingorfirm', 'buildingorfirm'),
+        ('recordtype', 'recordtype'),
+        ('zipcode',	'zipcode'),
+        ('zip4', 'zip4low')
 ])
 
 def standardize_nulls(val):
@@ -329,6 +329,7 @@ processed_rows = zip4_table.fieldmap(mapping) \
         .addfield('addr_comps', lambda  a: [a['low'], a['pre'], a['name'], a['suffix'], a['post']]) \
         .addfield('concat', lambda c: ' '.join(filter(None, c['addr_comps']))) \
         .addfield('parsed_comps', lambda p: parser.parse(p['concat'])) \
+        .addfield('street_full', lambda a: a['parsed_comps']['components']['street']['full']) \
         .addfield('std_base', lambda a: a['parsed_comps']['components']['base_address']) \
         .addfield('std_pre', lambda a: a['parsed_comps']['components']['street']['predir']) \
         .addfield('std_name', lambda a: a['parsed_comps']['components']['street']['name']) \
@@ -353,4 +354,7 @@ etl.tocsv(processed_rows, 'change_report_' + zip4_outfile_path)
 print("Writing cleaned_usps output to csv")
 etl.cutout(processed_rows, 'base', 'pre', 'name', 'suffix', 'post', 'change_pre', 'change_name', 'change_suffix', 'change_post') \
         .rename({'std_base': 'base', 'std_pre': 'pre', 'std_name': 'name', 'std_suffix': 'suffix', 'std_post': 'post'}) \
-        .tocsv('cleaned_' + zip4_outfile_path)
+        .cut('street_full', 'pre', 'name', 'suffix', 'post', 'low', 'high', 'oeb', 'unit', 'unitlow', 'unithigh', 'unitoeb', 'buildingorfirm', 'recordtype', 'zipcode',	'zip4') \
+        .convert('low', int) \
+        .sort(key=['name', 'pre', 'suffix', 'post', 'low', 'high', 'unit', 'unitlow', 'unithigh']) \
+        .tocsv('uspszip4.csv', write_header=False)
