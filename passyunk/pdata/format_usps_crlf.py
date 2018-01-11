@@ -358,4 +358,4 @@ etl.cutout(processed_rows, 'base', 'pre', 'name', 'suffix', 'post', 'change_pre'
         .convert('low', int) \
         .select("{low} is not None") \
         .sort(key=['name', 'pre', 'suffix', 'post', 'low', 'high', 'unit', 'unitlow', 'unithigh']) \
-        .tocsv('uspszip4_test.csv', write_header=False)
+        .tocsv('uspszip4.csv', write_header=False)
