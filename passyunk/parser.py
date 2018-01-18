@@ -402,7 +402,7 @@ def parse(item, MAX_RANGE):
         # if the users doesn't have the zip4 file, parser will still work
 
         if is_zip_file:
-            get_zip_info(address, address_uber)
+            get_zip_info(address, address_uber, MAX_RANGE)
             create_full_names(address, address_uber.type)
 
         # important that full names are created before adding election

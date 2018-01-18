@@ -223,7 +223,7 @@ def get_unique_zipcodes(lst):
     return zips
 
 
-def get_zip_info(address, address_uber):
+def get_zip_info(address, address_uber, MAX_RANGE):
     zlist = is_zip4_base(address.street.full)
     addr_unit = parse_unit_num(address.address_unit.unit_num)
     addr_type = address.address_unit.unit_type
@@ -250,7 +250,7 @@ def get_zip_info(address, address_uber):
                 address.street.predir = mlist[0].pre
                 address.street.suffix = mlist[0].suffix
                 address.street.post = mlist[0].post
-                get_cl_info(address, address_uber)
+                get_cl_info(address, address_uber, MAX_RANGE)
                 address.mailing.matchdesc = 'input zipcode match'
                 return
 
