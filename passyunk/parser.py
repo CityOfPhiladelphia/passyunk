@@ -613,7 +613,7 @@ cwd += '/pdata'
 street_centerline_lookup, street_centerline_name_lookup, cl_name_lookup, cl_pre_lookup, \
 cl_suffix_lookup = create_centerline_street_lookup()
 
-# if the users doesn't have the zip4 or centerline file, parser will still work
+# if the user doesn't have the zip4 or centerline file, parser will still work
 is_zip_file = create_zip4_lookup()
 if not is_zip_file:
     warnings.warn('USPS file not found.')
@@ -629,6 +629,9 @@ class PassyunkParser:
     def __init__(self, return_dict=True, MAX_RANGE=200):
         self.return_dict = return_dict
         self.MAX_RANGE = MAX_RANGE
+        self.zip_file_loaded = True if is_zip_file else False
+        self.cl_file_loaded =  True if is_cl_file else False
+        self.election_file_loaded =  True if is_election_file else False
 
     def parse(self, addr_str):
         parsed_out = parse(addr_str, self.MAX_RANGE)
