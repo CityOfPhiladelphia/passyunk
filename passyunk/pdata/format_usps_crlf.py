@@ -15,19 +15,34 @@ Arguments: none
 # where each month's data is located.
 import re
 import csv
+import os
 from collections import OrderedDict
 import petl as etl
+import cx_Oracle
+import boto3
 from passyunk.parser import PassyunkParser
+from config import get_dsn
 
-month = '2017_10'
+month = '2018_01'
+parser = PassyunkParser()
 
 # Input locations
 loc = r'C:/Projects/etl/data/usps/'
 csbyst = '/pa.txt'
 zip4 = '/pa'
 
-zip3s = ['190', '191', '192']
+# Output params
+s3_bucket = 'elasticbeanstalk-us-east-1-676612114792'
+alias_outfile_path = 'usps_alias.csv'
+cityzip_outfile_path = 'usps_cityzip.csv'
+zip4_outfile_path = 'uspszip4.csv'
+temp_zip4_outfile_path = 't_uspszip4.csv'
+dsn = get_dsn('ais_dev')
+connection = cx_Oracle.Connection(dsn)
+#####################################
+# Meta:
 
+zip3s = ['190', '191', '192']
 zips = ['19019',
         '19092',
         '19093',
@@ -107,16 +122,7 @@ zips = ['19019',
         '19244',
         '19255',
         ]
-print(loc + month + csbyst)
 
-csbyst_f = open(loc + month + csbyst, 'r')
-
-alias_id = 0
-city_id = 0
-zip4_id = 0
-alias_rows = []
-cityzip_rows = []
-zip4_rows = []
 alias_header = ['objectid', 'zipcode', 'aliaspre', 'aliasname', 'aliassuff', 'aliaspost', 'streetpre', 'streetname',
                 'street', 'post', 'aliastype', 'aliasdate', 'aliasrangelow', 'aliasrangehigh', 'aliasoeb', 'alias_unknown']
 
@@ -129,7 +135,63 @@ zip4_header = ['objectid', 'zipcode', 'updatekey', 'actioncode', 'recordtype', '
                'addrsecondaryabbr', 'addrsecondarylow', 'addrsecondaryhigh', 'adrsecondaryoeb', 'zip4low',
                'zip4high', 'basealt', 'lacs', 'govtbldg', 'financeno', 'state', 'countyfips', 'congressno',
                'munikey', 'urbankey', 'preflastline']
-#
+
+zip4_mapping = OrderedDict([
+    ('base', 'basealt'),
+    ('pre', 'streetpre'),
+    ('name', 'streetname'),
+    ('suffix', 'streetsuff'),
+    ('post', 'streetpost'),
+    ('low', 'addrlow'),
+    ('high', 'addrhigh'),
+    ('oeb', 'addroeb'),
+    ('unit', 'addrsecondaryabbr'),
+    ('unitlow', 'addrsecondarylow'),
+    ('unithigh', 'addrsecondaryhigh'),
+    ('unitoeb', 'adrsecondaryoeb'),
+    ('buildingorfirm', 'buildingorfirm'),
+    ('recordtype', 'recordtype'),
+    ('zipcode', 'zipcode'),
+    ('zip4', 'zip4low')
+])
+#################################################
+# Utils:
+
+def standardize_nulls(val):
+    if type(val) == str:
+        return None if val.strip() == '' else val
+    else:
+        return None if val == 0 else val
+
+
+class CursorProxy(object):
+    def __init__(self, cursor):
+        self._cursor = cursor
+
+    def executemany(self, statement, parameters, **kwargs):
+        # convert parameters to a list
+        parameters = list(parameters)
+        # pass through to proxied cursor
+        return self._cursor.executemany(statement, parameters, **kwargs)
+
+    def __getattr__(self, item):
+        return getattr(self._cursor, item)
+
+
+def get_cursor():
+    return CursorProxy(connection.cursor())
+
+###################################################
+# Declarations:
+alias_id = 0
+city_id = 0
+zip4_id = 0
+alias_rows = []
+cityzip_rows = []
+zip4_rows = []
+###################################################
+# Start:
+csbyst_f = open(loc + month + csbyst, 'r')
 while True:
     ch = csbyst_f.read(129)
     if not ch:
@@ -274,11 +336,8 @@ for zip3 in zip3s:
 
 csbyst_f.close()
 f.close()
-
-alias_outfile_path = 'alias_fmt_' + month + '.csv'
-cityzip_outfile_path = 'cityzip_fmt_' + month + '.csv'
-zip4_outfile_path = 'zip4_fmt_' + month + '.csv'
-
+########################################
+# Write:
 with open(alias_outfile_path, 'w', newline='') as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames=alias_header)
     writer.writeheader()
@@ -291,71 +350,64 @@ with open(cityzip_outfile_path, 'w', newline='') as csvfile:
     for row in cityzip_rows:
         writer.writerow(row)
 
-with open(zip4_outfile_path, 'w', newline='') as csvfile:
+with open(temp_zip4_outfile_path, 'w', newline='') as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames=zip4_header)
     writer.writeheader()
     for row in zip4_rows:
         writer.writerow(row)
 
-mapping = OrderedDict([
-        ('base', 'basealt'),
-        ('pre','streetpre'),
-        ('name', 'streetname'),
-        ('suffix', 'streetsuff'),
-        ('post', 'streetpost'),
-        ('low', 'addrlow'),
-        ('high', 'addrhigh'),
-        ('oeb', 'addroeb'),
-        ('unit', 'addrsecondaryabbr'),
-        ('unitlow', 'addrsecondarylow'),
-        ('unithigh', 'addrsecondaryhigh'),
-        ('unitoeb', 'adrsecondaryoeb'),
-        ('buildingorfirm', 'buildingorfirm'),
-        ('recordtype', 'recordtype'),
-        ('zipcode',	'zipcode'),
-        ('zip4', 'zip4low')
-])
-
-def standardize_nulls(val):
-    if type(val) == str:
-        return None if val.strip() == '' else val
-    else:
-        return None if val == 0 else val
-
-parser = PassyunkParser()
-zip4_table = etl.fromcsv(zip4_outfile_path)
-print(etl.look(zip4_table))
-processed_rows = zip4_table.fieldmap(mapping) \
-        .addfield('addr_comps', lambda  a: [a['low'], a['pre'], a['name'], a['suffix'], a['post']]) \
-        .addfield('concat', lambda c: ' '.join(filter(None, c['addr_comps']))) \
-        .addfield('parsed_comps', lambda p: parser.parse(p['concat'])) \
-        .addfield('street_full', lambda a: a['parsed_comps']['components']['street']['full']) \
-        .addfield('std_base', lambda a: a['parsed_comps']['components']['base_address']) \
-        .addfield('std_pre', lambda a: a['parsed_comps']['components']['street']['predir']) \
-        .addfield('std_name', lambda a: a['parsed_comps']['components']['street']['name']) \
-        .addfield('std_suffix', lambda a: a['parsed_comps']['components']['street']['suffix']) \
-        .addfield('std_post', lambda a: a['parsed_comps']['components']['street']['postdir']) \
-        .addfield('change_pre', lambda a: 1 if str(standardize_nulls(a['pre'])) != str(
-            standardize_nulls(a['std_pre'])) else None) \
-        .addfield('change_name', lambda a: 1 if str(standardize_nulls(a['name'])) != str(
-            standardize_nulls(a['std_name'])) else None) \
-        .addfield('change_suffix', lambda a: 1 if str(standardize_nulls(a['suffix'])) != str(
-            standardize_nulls(a['std_suffix'])) else None) \
-        .addfield('change_post', lambda a: 1 if str(standardize_nulls(a['post'])) != str(
-            standardize_nulls(a['std_post'])) else None) \
-        .cutout('addr_comps', 'parsed_comps', 'concat')
+#####################################
+# Create zip4 address standardization report:
+print("Writing address standardization report")
+zip4_table = etl.fromcsv(temp_zip4_outfile_path)
+processed_rows = zip4_table.fieldmap(zip4_mapping) \
+    .addfield('addr_comps', lambda a: [a['low'], a['pre'], a['name'], a['suffix'], a['post']]) \
+    .addfield('concat', lambda c: ' '.join(filter(None, c['addr_comps']))) \
+    .addfield('parsed_comps', lambda p: parser.parse(p['concat'])) \
+    .addfield('street_full', lambda a: a['parsed_comps']['components']['street']['full']) \
+    .addfield('std_base', lambda a: a['parsed_comps']['components']['base_address']) \
+    .addfield('std_pre', lambda a: a['parsed_comps']['components']['street']['predir']) \
+    .addfield('std_name', lambda a: a['parsed_comps']['components']['street']['name']) \
+    .addfield('std_suffix', lambda a: a['parsed_comps']['components']['street']['suffix']) \
+    .addfield('std_post', lambda a: a['parsed_comps']['components']['street']['postdir']) \
+    .addfield('std_low', lambda a: a['parsed_comps']['components']['address']['low']) \
+    .addfield('std_high', lambda a: a['parsed_comps']['components']['address']['high']) \
+    .addfield('std_unit', lambda a: a['parsed_comps']['components']['address_unit']['unit_type']) \
+    .addfield('change_pre', lambda a: 1 if str(standardize_nulls(a['pre'])) != str(
+    standardize_nulls(a['std_pre'])) else None) \
+    .addfield('change_name', lambda a: 1 if str(standardize_nulls(a['name'])) != str(
+    standardize_nulls(a['std_name'])) else None) \
+    .addfield('change_suffix', lambda a: 1 if str(standardize_nulls(a['suffix'])) != str(
+    standardize_nulls(a['std_suffix'])) else None) \
+    .addfield('change_post', lambda a: 1 if str(standardize_nulls(a['post'])) != str(
+    standardize_nulls(a['std_post'])) else None) \
+    .addfield('change_low', lambda a: 1 if str(standardize_nulls(a['low'])) != str(
+    standardize_nulls(a['std_low'])) else None) \
+    .addfield('change_high', lambda a: 1 if str(standardize_nulls(a['high'])) != str(
+    standardize_nulls(a['std_high'])) else None) \
+    .addfield('change_unit', lambda a: 1 if str(standardize_nulls(a['unit'])) != str(
+    standardize_nulls(a['std_unit'])) else None) \
+    .cutout('addr_comps', 'parsed_comps', 'concat')
 
 print(etl.look(processed_rows))
-# Write address standardization report:
-print("Writing address standardization report")
-etl.tocsv(processed_rows, 'change_report_' + zip4_outfile_path)
+# Write address standardization report to DB:
+etl.todb(processed_rows, get_cursor, 'USPS_ZIP4_ADDRESS_CHECK')
 
-# Write cleaned_usps to csv:
-print("Writing cleaned_usps output to csv")
+# Write processed_rows to uspszip4.csv:
+print("Writing cleaned_usps output to uspszip4.csv")
 etl.cutout(processed_rows, 'base', 'pre', 'name', 'suffix', 'post', 'change_pre', 'change_name', 'change_suffix', 'change_post') \
         .rename({'std_base': 'base', 'std_pre': 'pre', 'std_name': 'name', 'std_suffix': 'suffix', 'std_post': 'post'}) \
         .cut('street_full', 'pre', 'name', 'suffix', 'post', 'low', 'high', 'oeb', 'unit', 'unitlow', 'unithigh', 'unitoeb', 'buildingorfirm', 'recordtype', 'zipcode',	'zip4') \
         .convert('low', int) \
         .select("{low} is not None") \
         .sort(key=['name', 'pre', 'suffix', 'post', 'low', 'high', 'unit', 'unitlow', 'unithigh']) \
-        .tocsv('uspszip4.csv', write_header=False)
+        .tocsv(zip4_outfile_path, write_header=False)
+
+# Write processed_rows to s3:
+print("Writing uspszip4.csv to s3")
+# s3 = boto3.resource('s3', config=Config(proxies={'http': os.environ['HTTP_PROXY'], 'https': os.environ['HTTPS_PROXY']}))
+s3 = boto3.resource('s3')
+s3.meta.client.upload_file(zip4_outfile_path, s3_bucket, 'static files/' + zip4_outfile_path)
+
+# Clean up:
+os.remove(temp_zip4_outfile_path)
