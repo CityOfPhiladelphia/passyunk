@@ -1,18 +1,3 @@
-"""
-USPS ZIP4 and CityState table parser and export to csv
-
-Author: Tom Swanson
-
-Created: 12/26/2014
-Last Updated: 6/20/2016
-
-
-Version: 1.0
-
-Arguments: none
-"""
-
-# where each month's data is located.
 import re
 import csv
 import os
@@ -21,9 +6,9 @@ import petl as etl
 import cx_Oracle
 import boto3
 from passyunk.parser import PassyunkParser
-from config import get_dsn
+from config import get_dsn, get_bucket
 
-month = '2018_01'
+month = '2018_02'
 parser = PassyunkParser()
 
 # Input locations
@@ -32,12 +17,12 @@ csbyst = '/pa.txt'
 zip4 = '/pa'
 
 # Output params
-s3_bucket = 'elasticbeanstalk-us-east-1-676612114792'
+s3_bucket = get_bucket()
 alias_outfile_path = 'usps_alias.csv'
 cityzip_outfile_path = 'usps_cityzip.csv'
 zip4_outfile_path = 'uspszip4.csv'
 temp_zip4_outfile_path = 't_uspszip4.csv'
-dsn = get_dsn('ais_dev')
+dsn = get_dsn('ais')
 connection = cx_Oracle.Connection(dsn)
 #####################################
 # Meta:
