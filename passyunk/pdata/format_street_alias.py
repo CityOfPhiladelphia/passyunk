@@ -19,7 +19,6 @@ stmt = '''
 db = cx_Oracle.connect(dsn)
 
 alias_rows = etl.fromdb(db, stmt).convert('SEG_ID', int)
-
 print(etl.look(alias_rows))
 # alias_rows.appendcsv(centerline_csv)
 
@@ -40,7 +39,7 @@ alias_centerline_street_rows = alias_rows.cut('PRE_DIR', 'ST_NAME', 'ST_TYPE') \
     .cut('STREET_FULL', 'PRE_DIR', 'ST_NAME', 'ST_TYPE') \
     .addfield('POST_DIR', '')
 
-new_centerline_street_rows = etl.cat(centerline_street_rows, alias_centerline_street_rows).sort(key=['ST_NAME', 'ST_TYPE', 'PRE_DIR']).distinct()
+new_centerline_street_rows = etl.cat(centerline_street_rows, alias_centerline_street_rows).distinct().sort(key=['ST_NAME', 'ST_TYPE', 'PRE_DIR'])
 
 print(etl.look(new_centerline_street_rows))
 new_centerline_street_rows.tocsv(centerline_streets_csv, write_header=False)
