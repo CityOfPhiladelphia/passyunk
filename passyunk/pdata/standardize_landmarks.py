@@ -5,7 +5,7 @@ from passyunk.parser import PassyunkParser
 from passyunk.config import get_dsn
 
 parser = PassyunkParser()
-outfile = "landmarks.csv"
+outfile = "landmarks_new.csv"
 dsn = get_dsn('gsg')
 dbo = cx_Oracle.connect(dsn)
 
@@ -19,9 +19,9 @@ def standardize(tmp):
     tmp = ' '.join(std)
     return tmp
 
-stmt = '''select name, address from city_landmarks where address is not null and substr(name,1,1) NOT IN ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
+stmt = '''select name, address from namedplaces_polygons where address is not null and substr(name,1,1) NOT IN ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
 union
-select name, address from city_landmarks_pts where address is not null and substr(name,1,1) NOT IN ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
+select name, address from namedplaces_points where address is not null and substr(name,1,1) NOT IN ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
 '''
 
 rows = etl.fromdb(dbo, stmt) \
