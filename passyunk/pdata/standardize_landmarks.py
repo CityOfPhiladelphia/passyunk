@@ -19,9 +19,9 @@ def standardize(tmp):
     tmp = ' '.join(std)
     return tmp
 
-stmt = '''select name, address from namedplaces_polygons where address is not null and substr(name,1,1) NOT IN ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
+stmt = '''select name, address from namedplaces_polygons where address is not null and substr(name,1,1) NOT IN ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9') and public_ = 'Y'
 union
-select name, address from namedplaces_points where address is not null and substr(name,1,1) NOT IN ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
+select name, address from namedplaces_points where address is not null and substr(name,1,1) NOT IN ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9') and public_ = 'Y'
 '''
 
 rows = etl.fromdb(dbo, stmt) \
