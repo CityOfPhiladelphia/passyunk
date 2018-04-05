@@ -26,6 +26,7 @@ from .election import create_election_lookup, get_election_info
 from .parser_addr import parse_addr_1, name_switch, is_centerline_street_name, is_centerline_street_pre, \
     is_centerline_street_suffix, is_centerline_name, Address
 from .zip4 import create_zip4_lookup, get_zip_info
+from .landmark import Landmark
 
 is_cl_file = False
 is_election_file = False
@@ -288,15 +289,12 @@ def xy_check(item):
     else:
         return 'JUNK'
 
-
 def parse(item, MAX_RANGE):
     # address = Addr()
     address_uber = AddressUber()
     address = address_uber.components
     # latlon_search = latlon_re.search(item)
-
     is_xy = xy_check(item)
-
     if not is_xy:
         item = input_cleanup(address_uber, item)
 
@@ -310,6 +308,7 @@ def parse(item, MAX_RANGE):
     regmap_search = mapreg_re.search(item)
     zipcode_search = zipcode_re.search(item)
     po_box_search = po_box_re.search(item)
+    landmark = Landmark(item)
 
     if is_xy:
         address_uber.input_address = item
@@ -347,7 +346,6 @@ def parse(item, MAX_RANGE):
         if tokens[1] == 'LI':
             address_uber.type = AddrType.address
         else:
-
             address2 = Address()
             address2 = parse_addr_1(address2, tokens[1])
             address.street_2 = address2.street
@@ -360,6 +358,8 @@ def parse(item, MAX_RANGE):
         address.street.name = 'PO BOX {}'.format(num)
 
     else:
+    #     if landmark_addr:
+    #         item = landmark_addr
         #######################################################################################################################
 
         address = parse_addr_1(address, item)
@@ -375,7 +375,6 @@ def parse(item, MAX_RANGE):
                     address_uber.type = AddrType.address
                 if address.street.name == '':
                     raise ValueError('Parsed address does not have a street name: {}'.format(item))
-
             elif address_uber.type != AddrType.block:
                 address_uber.type = AddrType.street
 
@@ -390,6 +389,16 @@ def parse(item, MAX_RANGE):
 
     if address_uber.components.cl_seg_id != '':
         address_uber.components.street.is_centerline_match = True
+
+    # check if landmark if address_uber.type = none, street or = intersection_addr with at least one non-matching streets
+    if address_uber.type in (AddrType.street, AddrType.none) or (address_uber.type == AddrType.intersection_addr and (
+            address_uber.components.street.is_centerline_match == False or address_uber.components.street_2.is_centerline_match == False)):
+        landmark.landmark_check()
+        if landmark.is_landmark:
+            item = landmark.landmark_address
+            address = parse_addr_1(address, item)
+            # Hack to process address steps below:
+            address_uber.type = AddrType.address
 
     create_full_names(address, address_uber.type)
 
@@ -543,7 +552,9 @@ def parse(item, MAX_RANGE):
         address_uber.components.output_address = None
     if address_uber.type == '':
         address_uber.type = None
-
+    # Hack to set type back to landmark:
+    if landmark.is_landmark:
+        address_uber.type = AddrType.landmark
     return address_uber
 
 
