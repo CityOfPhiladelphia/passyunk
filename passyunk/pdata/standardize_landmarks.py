@@ -5,7 +5,7 @@ from passyunk.parser import PassyunkParser
 from passyunk.config import get_dsn
 
 parser = PassyunkParser()
-outfile = "landmarks_new.csv"
+outfile = "landmarks.csv"
 dsn = get_dsn('gsg')
 dbo = cx_Oracle.connect(dsn)
 
