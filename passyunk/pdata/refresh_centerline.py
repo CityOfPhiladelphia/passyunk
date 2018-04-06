@@ -2,10 +2,12 @@
 This refreshes the centerline.csv and centerline_streets.csv from scratch with alias'.
 Author: Alex Waldman
 '''
-
+import re
+import string
 import petl as etl
 import cx_Oracle
-from config import get_dsn
+from passyunk.config import get_dsn
+from passyunk.namestd import StandardName
 
 dsn = get_dsn('ais_sources')
 dbo = cx_Oracle.connect(dsn)
@@ -22,8 +24,16 @@ def concat_streetname(row):
     stnam_list = filter(None, [predir, st_name, st_type])
     return ' '.join(stnam_list)
 
+def standardize_name(name):
+    tmp = name.strip()
+    # Name standardization:
+    tmp_list = re.sub('[' + string.punctuation + ']', '', tmp).split()
+    std = StandardName(tmp_list, False).output
+    std_name = ' '.join(std)
+    return std_name
 
-centerline_stmt = '''select PRE_DIR,ST_NAME,ST_TYPE,SUF_DIR,L_F_ADD,L_T_ADD,R_F_ADD,R_T_ADD,ST_CODE,SEG_ID,RESPONSIBL from {}
+
+centerline_stmt = '''select PRE_DIR,ST_NAME,ST_TYPE,SUF_DIR,L_F_ADD,L_T_ADD,R_F_ADD,R_T_ADD,ST_CODE,SEG_ID,RESPONSIBL from {} 
            order by st_name, pre_dir, st_type, suf_dir, l_f_add, l_t_add, r_f_add, r_t_add, st_code, seg_id'''.format(street_centerline_table_name)
 
 alias_stmt = '''
@@ -34,7 +44,8 @@ alias_stmt = '''
     order by st_name, pre_dir, st_type, suf_dir, l_f_add, l_t_add, r_f_add, r_t_add, st_code, seg_id
 '''.format(cl_table = street_centerline_table_name, alias_table = alias_table_name)
 
-centerline_rows = etl.fromdb(dbo, centerline_stmt)
+# Get street centerlines with standardizations
+centerline_rows = etl.fromdb(dbo, centerline_stmt).convert('ST_NAME', lambda s: standardize_name(s))
 alias_rows = etl.fromdb(dbo, alias_stmt).convert('SEG_ID', int)
 centerline_rows.tocsv(centerline_csv)
 alias_rows.appendcsv(centerline_csv)
