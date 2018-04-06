@@ -308,7 +308,7 @@ def parse(item, MAX_RANGE):
     regmap_search = mapreg_re.search(item)
     zipcode_search = zipcode_re.search(item)
     po_box_search = po_box_re.search(item)
-    landmark = Landmark(item)
+    # landmark = Landmark(item)
 
     if is_xy:
         address_uber.input_address = item
@@ -391,14 +391,14 @@ def parse(item, MAX_RANGE):
         address_uber.components.street.is_centerline_match = True
 
     # check if landmark if address_uber.type = none, street or = intersection_addr with at least one non-matching streets
-    if address_uber.type in (AddrType.street, AddrType.none) or (address_uber.type == AddrType.intersection_addr and (
-            address_uber.components.street.is_centerline_match == False or address_uber.components.street_2.is_centerline_match == False)):
-        landmark.landmark_check()
-        if landmark.is_landmark:
-            item = landmark.landmark_address
-            address = parse_addr_1(address, item)
-            # Hack to process address steps below:
-            address_uber.type = AddrType.address
+    # if address_uber.type in (AddrType.street, AddrType.none) or (address_uber.type == AddrType.intersection_addr and (
+    #         address_uber.components.street.is_centerline_match == False or address_uber.components.street_2.is_centerline_match == False)):
+    #     landmark.landmark_check()
+    #     if landmark.is_landmark:
+    #         item = landmark.landmark_address
+    #         address = parse_addr_1(address, item)
+    #         # Hack to process address steps below:
+    #         address_uber.type = AddrType.address
 
     create_full_names(address, address_uber.type)
 
@@ -553,8 +553,8 @@ def parse(item, MAX_RANGE):
     if address_uber.type == '':
         address_uber.type = None
     # Hack to set type back to landmark:
-    if landmark.is_landmark:
-        address_uber.type = AddrType.landmark
+    # if landmark.is_landmark:
+    #     address_uber.type = AddrType.landmark
     return address_uber
 
 
