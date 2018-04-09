@@ -43,15 +43,30 @@ alias_stmt = '''
     inner join {cl_table} sc on sc.seg_id = ala.seg_id
     order by st_name, pre_dir, st_type, suf_dir, l_f_add, l_t_add, r_f_add, r_t_add, st_code, seg_id
 '''.format(cl_table = street_centerline_table_name, alias_table = alias_table_name)
-
+#
+# union_stmt = '''
+# with full as
+# (
+# select PRE_DIR,ST_NAME,ST_TYPE,SUF_DIR,L_F_ADD,L_T_ADD,R_F_ADD,R_T_ADD,ST_CODE,SEG_ID,RESPONSIBL from {cl_table}
+# union
+# (
+# select ala.pre_dir, ala.name as st_name, ala.type_ as st_type, ala.suf_dir, sc.l_f_add, sc.l_t_add, sc.r_f_add,
+# sc.r_t_add, sc.st_code, cast(ala.seg_id as int), sc.responsibl
+# from {alias_table} ala
+# inner join {cl_table} sc on sc.seg_id = ala.seg_id
+# )
+# )
+# select distinct * from full
+# order by st_name, pre_dir, st_type, suf_dir, l_f_add, l_t_add, r_f_add, r_t_add, st_code, seg_id
+# '''.format(cl_table = street_centerline_table_name, alias_table = alias_table_name)
 # Get street centerlines with standardizations
 centerline_rows = etl.fromdb(dbo, centerline_stmt).convert('ST_NAME', lambda s: standardize_name(s))
 alias_rows = etl.fromdb(dbo, alias_stmt).convert('SEG_ID', int)
-centerline_rows.tocsv(centerline_csv)
-alias_rows.appendcsv(centerline_csv)
-
-# unioned_rows = centerline_rows.cat(alias_rows)
-# unioned_rows.tocsv(centerline_csv)
+# unioned_rows = etl.fromdb(dbo, union_stmt).convert('ST_NAME', lambda s: standardize_name(s))
+# centerline_rows.tocsv(centerline_csv)
+# alias_rows.appendcsv(centerline_csv)
+unioned_rows = etl.cat(centerline_rows, alias_rows).distinct().sort(key=['ST_NAME', 'PRE_DIR', 'ST_TYPE', 'SUF_DIR', 'L_F_ADD', 'L_T_ADD', 'R_F_ADD', 'R_T_ADD', 'ST_CODE', 'SEG_ID'])
+unioned_rows.tocsv(centerline_csv)
 
 # Centerline_streets
 centerline_street_rows = centerline_rows.cut('PRE_DIR', 'ST_NAME', 'ST_TYPE') \
