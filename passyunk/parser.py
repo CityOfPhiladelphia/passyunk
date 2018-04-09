@@ -308,7 +308,7 @@ def parse(item, MAX_RANGE):
     regmap_search = mapreg_re.search(item)
     zipcode_search = zipcode_re.search(item)
     po_box_search = po_box_re.search(item)
-    # landmark = Landmark(item)
+    landmark = Landmark(item)
 
     if is_xy:
         address_uber.input_address = item
@@ -376,12 +376,19 @@ def parse(item, MAX_RANGE):
                 if address.street.name == '':
                     raise ValueError('Parsed address does not have a street name: {}'.format(item))
             elif address_uber.type != AddrType.block:
-                address_uber.type = AddrType.street
+                # if the users doesn't have the centerline file, parser will still work
+                if is_cl_file:
+                    get_cl_info(address, address_uber, MAX_RANGE)
+                    # if address_uber.type == 'intersection_addr':
+                    #     get_cl_info_street2(address)
+                # address_uber.type = AddrType.street
+                address_uber.type = AddrType.none
 
     name_switch(address)
 
     if address_uber.type == AddrType.address and not address_uber.components.street.is_centerline_match:
         centerline_rematch(address.street)
+
 
     if address_uber.type == AddrType.intersection_addr:
         centerline_rematch(address.street)
@@ -390,37 +397,38 @@ def parse(item, MAX_RANGE):
     if address_uber.components.cl_seg_id != '':
         address_uber.components.street.is_centerline_match = True
 
-    # check if landmark if address_uber.type = none, street or = intersection_addr with at least one non-matching streets
-    # if address_uber.type in (AddrType.street, AddrType.none) or (address_uber.type == AddrType.intersection_addr and (
-    #         address_uber.components.street.is_centerline_match == False or address_uber.components.street_2.is_centerline_match == False)):
-    #     landmark.landmark_check()
-    #     if landmark.is_landmark:
-    #         item = landmark.landmark_address
-    #         address = parse_addr_1(address, item)
-    #         # Hack to process address steps below:
-    #         address_uber.type = AddrType.address
-
     create_full_names(address, address_uber.type)
 
     # if the users doesn't have the centerline file, parser will still work
     if is_cl_file:
         get_cl_info(address, address_uber, MAX_RANGE)
+        if address_uber.components.street.is_centerline_match and address_uber.type == AddrType.none:
+            address_uber.type = AddrType.street
         if address_uber.type == 'intersection_addr':
             get_cl_info_street2(address)
 
-        # if the users doesn't have the zip4 file, parser will still work
+    # check if landmark if address_uber.type = none, street or = intersection_addr with at least one non-matching streets
+    if address_uber.type == AddrType.none or (address_uber.type == AddrType.intersection_addr and (
+                    address_uber.components.street.is_centerline_match == False or address_uber.components.street_2.is_centerline_match == False)):
+        landmark.landmark_check()
+        if landmark.is_landmark:
+            item = landmark.landmark_address
+            address = parse_addr_1(address, item)
+            # Hack to process address steps below:
+            address_uber.type = AddrType.address
 
-        if is_zip_file:
-            get_zip_info(address, address_uber, MAX_RANGE)
-            create_full_names(address, address_uber.type)
+    # if the users doesn't have the zip4 file, parser will still work
+    if is_zip_file:
+        get_zip_info(address, address_uber, MAX_RANGE)
+        create_full_names(address, address_uber.type)
 
-        # important that full names are created before adding election
-        if is_election_file:
-            get_election_info(address)
-            # if test_cl_file:
-            # get_cl_info(address, address_uber.input_address)
-        if address_uber.components.address_unit.unit_type == '' and address_uber.components.address_unit.unit_num != '':
-            address_uber.components.address_unit.unit_type = '#'
+    # important that full names are created before adding election
+    if is_election_file:
+        get_election_info(address)
+        # if test_cl_file:
+        # get_cl_info(address, address_uber.input_address)
+    if address_uber.components.address_unit.unit_type == '' and address_uber.components.address_unit.unit_num != '':
+        address_uber.components.address_unit.unit_type = '#'
 
     if len(address.mailing.zip4) == 4 and address.mailing.zip4[2:4] == 'ND':
         address.mailing.zip4 = ''
@@ -553,8 +561,8 @@ def parse(item, MAX_RANGE):
     if address_uber.type == '':
         address_uber.type = None
     # Hack to set type back to landmark:
-    # if landmark.is_landmark:
-    #     address_uber.type = AddrType.landmark
+    if landmark.is_landmark:
+        address_uber.type = AddrType.landmark
     return address_uber
 
 
