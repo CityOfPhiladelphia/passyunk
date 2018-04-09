@@ -377,8 +377,8 @@ def parse(item, MAX_RANGE):
                     raise ValueError('Parsed address does not have a street name: {}'.format(item))
             elif address_uber.type != AddrType.block:
                 # if the users doesn't have the centerline file, parser will still work
-                if is_cl_file:
-                    get_cl_info(address, address_uber, MAX_RANGE)
+                # if is_cl_file:
+                #     get_cl_info(address, address_uber, MAX_RANGE)
                     # if address_uber.type == 'intersection_addr':
                     #     get_cl_info_street2(address)
                 # address_uber.type = AddrType.street
