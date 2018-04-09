@@ -19,9 +19,26 @@ def standardize(tmp):
     tmp = ' '.join(std)
     return tmp
 
-stmt = '''select name, address from namedplaces_polygons where address is not null and substr(name,1,1) NOT IN ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9') and public_ = 'Y'
+stmt = '''
+with places as 
+(
+select name, address, globalid from namedplaces_polygons where address is not null and substr(name,1,1) NOT IN ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9') and public_ = 'Y'
 union
-select name, address from namedplaces_points where address is not null and substr(name,1,1) NOT IN ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9') and public_ = 'Y'
+select name, address, globalid from namedplaces_points where address is not null and substr(name,1,1) NOT IN ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9') and public_ = 'Y'
+)
+,
+union_alias as
+(
+select p.name, p.address
+from places p
+union
+(select alias as name, p.address
+from namedplaces_alias npa
+left join places p on p.globalid = npa.foreign_key
+)
+)
+select * from union_alias where address is not null
+order by name
 '''
 
 rows = etl.fromdb(dbo, stmt) \
