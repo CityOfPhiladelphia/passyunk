@@ -33,12 +33,13 @@ def standardize_name(name):
     return std_name
 
 
-centerline_stmt = '''select PRE_DIR,ST_NAME,ST_TYPE,SUF_DIR,L_F_ADD,L_T_ADD,R_F_ADD,R_T_ADD,ST_CODE,SEG_ID,RESPONSIBL from {} 
+centerline_stmt = '''select trim(PRE_DIR) AS PRE_DIR,trim(ST_NAME) AS ST_NAME,trim(ST_TYPE) AS ST_TYPE,trim(SUF_DIR) AS SUF_SIDR,
+            L_F_ADD,L_T_ADD,R_F_ADD,R_T_ADD,ST_CODE,SEG_ID,trim(RESPONSIBL) AS RESPONSIBL from {} 
            order by st_name, pre_dir, st_type, suf_dir, l_f_add, l_t_add, r_f_add, r_t_add, st_code, seg_id'''.format(street_centerline_table_name)
 
 alias_stmt = '''
-    select ala.pre_dir, ala.name as st_name, ala.type_ as st_type, ala.suf_dir, sc.l_f_add, sc.l_t_add, sc.r_f_add,
-    sc.r_t_add, sc.st_code, ala.seg_id, sc.responsibl 
+    select trim(ala.pre_dir) as PRE_DIR, trim(ala.name) as ST_NAME, trim(ala.type_) as ST_TYPE, trim(ala.suf_dir) as SUF_DIR, sc.l_f_add, sc.l_t_add, sc.r_f_add,
+    sc.r_t_add, sc.st_code, ala.seg_id, trim(sc.responsibl) as RESPONSIBL
     from {alias_table} ala 
     inner join {cl_table} sc on sc.seg_id = ala.seg_id
     order by st_name, pre_dir, st_type, suf_dir, l_f_add, l_t_add, r_f_add, r_t_add, st_code, seg_id
@@ -62,7 +63,6 @@ alias_stmt = '''
 # Get street centerlines with standardizations
 centerline_rows = etl.fromdb(dbo, centerline_stmt).convert('ST_NAME', lambda s: standardize_name(s))
 alias_rows = etl.fromdb(dbo, alias_stmt).convert('SEG_ID', int).convert('ST_NAME', lambda s: standardize_name(s))
-unique_alias_names = alias_rows
 # unioned_rows = etl.fromdb(dbo, union_stmt).convert('ST_NAME', lambda s: standardize_name(s))
 # centerline_rows.tocsv(centerline_csv)
 # alias_rows.appendcsv(centerline_csv)
