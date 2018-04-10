@@ -61,7 +61,8 @@ alias_stmt = '''
 # '''.format(cl_table = street_centerline_table_name, alias_table = alias_table_name)
 # Get street centerlines with standardizations
 centerline_rows = etl.fromdb(dbo, centerline_stmt).convert('ST_NAME', lambda s: standardize_name(s))
-alias_rows = etl.fromdb(dbo, alias_stmt).convert('SEG_ID', int)
+alias_rows = etl.fromdb(dbo, alias_stmt).convert('SEG_ID', int).convert('ST_NAME', lambda s: standardize_name(s))
+unique_alias_names = alias_rows
 # unioned_rows = etl.fromdb(dbo, union_stmt).convert('ST_NAME', lambda s: standardize_name(s))
 # centerline_rows.tocsv(centerline_csv)
 # alias_rows.appendcsv(centerline_csv)
