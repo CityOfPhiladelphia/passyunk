@@ -62,6 +62,17 @@ alias_stmt = '''
 # '''.format(cl_table = street_centerline_table_name, alias_table = alias_table_name)
 # Get street centerlines with standardizations
 centerline_rows = etl.fromdb(dbo, centerline_stmt).convert('ST_NAME', lambda s: standardize_name(s))
+# Remove alias rows with same street name and seg_id but different suffix from existing centerline row
+cl_map = {}
+for row in centerline_rows[1:]:
+    cl_key = ' '.join(filter(None, list(row[0:2])))
+    if cl_key not in cl_map:
+        cl_map[cl_key] = []
+    cl_map[cl_key].append(list(row)[9])
+
+# alias_rows = etl.fromdb(dbo, alias_stmt).convert('SEG_ID', int).convert('ST_NAME', lambda s: standardize_name(s)) \
+#     .select(lambda s: s.SEG_ID not in cl_map.get(' '.join(filter(None, [s.PRE_DIR, s.ST_NAME])), []))
+
 alias_rows = etl.fromdb(dbo, alias_stmt).convert('SEG_ID', int).convert('ST_NAME', lambda s: standardize_name(s))
 # unioned_rows = etl.fromdb(dbo, union_stmt).convert('ST_NAME', lambda s: standardize_name(s))
 # centerline_rows.tocsv(centerline_csv)
