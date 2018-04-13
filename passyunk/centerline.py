@@ -5,14 +5,20 @@ import os
 import sys
 # import Levenshtein
 from fuzzywuzzy import process
+from shapely.wkt import loads
+from shapely.geometry import mapping, Point, MultiLineString
+from math import sin, cos, atan2, pi
 
 __author__ = 'tom.swanson'
 
 cwd = os.path.dirname(__file__)
 cwd += '/pdata'
 # cwd = cwd.replace('\\','/')
-cl_file = 'centerline'
-
+# cl_file = 'centerline'
+cl_file = 'centerline_shape'
+int_file = 'intersections'
+full_range_buffer = 17
+centerline_offset = 5
 # MAX_RANGE = 200
 
 # cfout = open(os.path.dirname(__file__)+'/sandbox/fuzzyout.csv', 'w')
@@ -32,6 +38,13 @@ for x in range(0, 26):
     cl_name_fw.append([x])
 
 
+class Intersection:
+    def __init__(self, int_row):
+        self.street_1_code = int_row[0].strip()
+        self.street_2_code = int_row[1].strip()
+        self.shape = int_row[2].strip()
+
+
 class Centerline:
     def __init__(self, row):
         self.pre = row[0].strip()
@@ -49,6 +62,7 @@ class Centerline:
         self.base = ' '.join(self.base.split())
         self.oeb_right = oeb(self.from_right, self.to_right)
         self.oeb_left = oeb(self.from_left, self.to_left)
+        self.shape = row[11]
 
     def __str__(self):
         return 'Centerline: {}-{} {}'.format(
@@ -72,13 +86,18 @@ class NameFW:
         self.name = ''
 
 
-def test_cl_file():
-    path = csv_path(cl_file)
+class ShapeOnly:
+    def __init__(self, row):
+        self.shape = row[11]
+
+
+def test_file(file):
+    path = csv_path(file)
     return os.path.isfile(path)
 
 
 def create_cl_lookup():
-    is_cl_file = test_cl_file()
+    is_cl_file = test_file(cl_file)
     if not is_cl_file:
         return False
     path = csv_path(cl_file)
@@ -209,6 +228,155 @@ def is_cl_name(test):
     return cl_list[name.low:name.high]
 
 
+def interpolate_line(line, distance_ratio, _buffer):
+	'''
+	Interpolate along a line with a buffer at both ends.
+	'''
+	length = line.length
+	buffered_length = length - (_buffer * 2)
+	buffered_distance = distance_ratio * buffered_length
+	absolute_distance = _buffer + buffered_distance
+	return line.interpolate(absolute_distance)
+
+
+def offset(line, point, distance, seg_side):
+    # Check for vertical line
+    if line.coords[0][0] == line.coords[1][0]:
+        pt_0 = line.coords[0]
+        pt_1 = line.coords[1]
+        upwards = True if pt_1[1] > pt_0[1] else False
+        if (upwards and seg_side == 'R') or (not upwards and seg_side == 'L'):
+            x_factor = 1
+        else:
+            x_factor = -1
+        return Point([point.x + (distance * x_factor), point.y])
+
+    assert None not in [line, point]
+    assert distance > 0
+    assert seg_side in ['L', 'R']
+
+    xsect_x = point.x
+    xsect_y = point.y
+    coord_1 = None
+    coord_2 = None
+
+    # Find coords on either side of intersect point
+    for i, coord in enumerate(line.coords[:-1]):
+        coord_x, coord_y = coord
+        next_coord = line.coords[i + 1]
+        next_coord_x, next_coord_y = next_coord
+        sandwich_x = coord_x < xsect_x < next_coord_x
+        sandwich_y = coord_y <= xsect_y <= next_coord_y
+        if sandwich_x or sandwich_y:
+            coord_1 = coord
+            coord_2 = next_coord
+            break
+
+    # Normalize coords to place in proper quadrant
+    norm_x = next_coord[0] - coord[0]
+    norm_y = next_coord[1] - coord[1]
+
+    # Get angle of seg
+    seg_angle = atan2(norm_y, norm_x)
+    # print('seg angle: {}'.format(degrees(seg_angle)))
+
+    # Get angle of offset line
+    if seg_side == 'L':
+        offset_angle = seg_angle + (pi / 2)
+    else:
+        offset_angle = seg_angle - (pi / 2)
+    # print('offset angle: {}'.format(degrees(offset_angle)))
+
+    # Get offset point
+    delta_x = cos(offset_angle) * distance
+    delta_y = sin(offset_angle) * distance
+    x = xsect_x + delta_x
+    y = xsect_y + delta_y
+    return Point([x, y])
+
+
+def get_street_geom(address):
+    # TODO: use centerlines in state
+    centerlines = is_cl_name(address.street.name)
+    coords = []
+    for centerline in centerlines:
+        coords.append(loads(centerline.shape))
+    multilinestring = MultiLineString(coords)
+    xy = multilinestring.centroid
+    snapped = multilinestring.interpolate(multilinestring.project(xy))
+    geom = mapping(snapped)
+    address.geometry = geom
+
+
+def get_midpoint_geom(address, match):
+    cl_shape = loads(address.street.shape)
+    xy = cl_shape.centroid
+    addr_low_num = address.address.low_num
+    # apply offset only if there's an addr_low_num
+    if addr_low_num != -1:
+        f_r = match.from_right
+        seg_side = "R" if f_r % 2 == addr_low_num % 2 else "L"
+        xy_offset = offset(cl_shape, xy, centerline_offset, seg_side)
+        geom = mapping(xy_offset)
+    else:
+        geom = mapping(xy)
+    address.geometry = geom
+
+
+def get_full_range_geom(address, match):
+    addr_low_num = address.address.low_num
+    cl_shape = loads(address.street.shape)
+    f_l = match.from_left
+    f_r = match.from_right
+    t_l = match.to_left
+    t_r = match.to_right
+    seg_side = "R" if f_r % 2 == addr_low_num % 2 else "L"
+    # Check if address low num is within centerline seg full address range with parity:
+    from_num, to_num = (f_r, t_r) if seg_side == "R" else (
+    f_l, t_l)
+    side_delta = to_num - from_num
+    if side_delta == 0:
+        distance_ratio = 0.5
+    else:
+        distance_ratio = (addr_low_num - from_num) / side_delta
+    xy = interpolate_line(cl_shape, distance_ratio, full_range_buffer)
+    xy_offset = offset(cl_shape, xy, centerline_offset, seg_side)
+
+    geom = mapping(xy_offset)
+    address.geometry = geom
+
+
+def get_int_geom(address):
+    street_1_code = min(int(address.street.street_code), int(address.street_2.street_code))
+    street_2_code = max(int(address.street.street_code), int(address.street_2.street_code))
+    is_int_file = test_file(int_file)
+    if not is_int_file:
+        return False
+    path = csv_path(int_file)
+    with open(path) as infile:
+        reader = csv.reader(infile)
+        next(reader, None)
+        for row in reader:
+            intersection = Intersection(row)
+            if int(intersection.street_1_code) == street_1_code and int(intersection.street_2_code) == street_2_code:
+                geom = mapping(loads(intersection.shape))
+                address.geometry = geom
+
+
+def get_address_geom(address, addr_uber=None, match=None):
+    type = addr_uber.type
+    if type == 'street':
+        get_street_geom(address)
+    elif type == 'address':
+        get_full_range_geom(address, match)
+    elif type == 'intersection_addr':
+        if address.street.street_code and address.street_2.street_code:
+            get_int_geom(address)
+    else:
+        pass
+    return address.geometry
+
+
 def get_cl_info(address, addr_uber, MAX_RANGE):
     addr_low_num = address.address.low_num
     addr_parity = address.address.parity
@@ -266,11 +434,14 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
             # good street name but no matching address range
             if addr_low_num == -1 and cur_closest is not None:
                 address.street.street_code = cur_closest.street_code
+                address.street.shape = cur_closest.shape
                 address.street.is_centerline_match = True
+                address.geometry = get_address_geom(address, addr_uber=addr_uber, match=cur_closest)
                 return
 
             if cur_closest_offset is not None and cur_closest_offset < MAX_RANGE:
                 address.street.street_code = cur_closest.street_code
+                address.street.shape = cur_closest.shape
                 address.cl_seg_id = cur_closest.cl_seg_id
                 address.cl_responsibility = cur_closest.cl_responsibility
                 address.cl_addr_match = 'RANGE:' + str(cur_closest_offset)
@@ -280,6 +451,8 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
             # Treat as a Street Match
             addr_uber.type = 'street'
             address.street.street_code = cl.street_code
+            address.street.shape = cl.shape
+            address.geometry = get_address_geom(address, addr_uber=addr_uber, match=cl)
             address.cl_addr_match = 'MATCH TO STREET. ADDR NUMBER NO MATCH'
             return
 
@@ -287,15 +460,19 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
         if len(matches) == 1:
             match = matches[0]
             address.street.street_code = match.street_code
+            address.street.shape = match.shape
             address.cl_seg_id = match.cl_seg_id
             address.cl_responsibility = match.cl_responsibility
             address.cl_addr_match = 'A'
+            address.geometry = get_address_geom(address, addr_uber=addr_uber, match=match)
             return
 
         # Exact Street match, multiple range matches, return the count of matches
         if len(matches) > 1:
             address.street.street_code = cl.street_code
+            address.street.shape = cl.shape
             address.cl_addr_match = 'AM'
+            address.geometry = get_address_geom(address, addr_uber=addr_uber, match=match)
             # address.cl_addr_match = str(len(matches))
             return
 
@@ -392,9 +569,11 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                     match_type += ' Suffix'
                     address.street.suffix = match.suffix
                 address.street.street_code = match.street_code
+                address.street.shape = match.shape
                 address.cl_seg_id = match.cl_seg_id
                 address.cl_responsibility = match.cl_responsibility
                 address.cl_addr_match = match_type
+                address.geometry = get_address_geom(address, addr_uber=addr_uber, match=match)
                 return
 
         if len(matches) == 1:
@@ -417,15 +596,19 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                 match_type += ' Suffix'
                 address.street.suffix = match.suffix
             address.street.street_code = match.street_code
+            address.street.shape = match.shape
             address.cl_seg_id = match.cl_seg_id
             address.cl_responsibility = match.cl_responsibility
             address.cl_addr_match = match_type
+            address.geometry = get_address_geom(address, addr_uber=addr_uber, match=match)
             return
 
         # need to resolve dir and/or suffix
         if len(matches) > 1:
             address.street.street_code = row.street_code
+            address.street.shape = row.shape
             address.cl_addr_match = 'MULTI'  # str(len(matches))
+            address.geometry = get_address_geom(address, addr_uber=addr_uber, match=match)
             return
 
     if len(address.street.name) > 3 and address.street.name.isalpha():
@@ -467,5 +650,8 @@ def get_cl_info_street2(address):
     # If there are matches
     if len(centerlines) > 0:
         address.street_2.street_code = centerlines[0].street_code
+        address.street_2.shape = centerlines[0].shape
+        if address.street.shape and address.street_2.shape:
+            get_int_geom(address)
         return
 

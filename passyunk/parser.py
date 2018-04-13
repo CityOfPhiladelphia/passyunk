@@ -19,7 +19,7 @@ import re
 import sys
 import warnings
 
-from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2
+from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2, get_address_geom
 from .data import opa_account_re, zipcode_re, po_box_re, mapreg_re, AddrType, \
     ILLEGAL_CHARS_RE
 from .election import create_election_lookup, get_election_info
@@ -404,6 +404,7 @@ def parse(item, MAX_RANGE):
         get_cl_info(address, address_uber, MAX_RANGE)
         if address_uber.components.street.is_centerline_match and address_uber.type == AddrType.none:
             address_uber.type = AddrType.street
+            get_address_geom(address_uber.components, addr_uber=address_uber)
         if address_uber.type == 'intersection_addr':
             get_cl_info_street2(address)
 
@@ -416,6 +417,8 @@ def parse(item, MAX_RANGE):
             address = parse_addr_1(address, item)
             # Hack to process address steps below:
             address_uber.type = AddrType.address
+            get_cl_info(address, address_uber, MAX_RANGE)
+            # get_address_geom(address, addr_uber=address_uber, match=address.street)
 
     # if the users doesn't have the zip4 file, parser will still work
     if is_zip_file:
@@ -563,6 +566,9 @@ def parse(item, MAX_RANGE):
     # Hack to set type back to landmark:
     if landmark.is_landmark:
         address_uber.type = AddrType.landmark
+    del address_uber.components.street.shape
+    del address_uber.components.street_2.shape
+
     return address_uber
 
 
