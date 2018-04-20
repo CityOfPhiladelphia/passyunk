@@ -18,8 +18,8 @@ Optionally, copy USPS, centerlines, and elections files to `/path/to/passyunk/pa
 
     from passyunk.parser import PassyunkParser
     p = PassyunkParser()
-    components = p.parse('1234 MARKET ST')
-    standardized_address = components['street_address']
+    parsed = p.parse('1234 MARKET ST')
+    standardized_address = parsed['components']['output_address']
 
 ### Parser.parse(address)
 
