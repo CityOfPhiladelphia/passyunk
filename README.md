@@ -83,6 +83,6 @@ Takes an address, standardizes it, and returns a dictionary of address component
           "suffix": null
         }
       },
-      "input_address": "1234 market st",
+      "input_address": "1234 MARKET ST",
       "type": "address"
     }
