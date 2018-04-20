@@ -60,9 +60,3 @@ target/
 
 venv/
 sandbox/
-
-# data files
-pdata/*usps*
-pdata/*election*
-pdata/*zip*
-pdata/refresh*
