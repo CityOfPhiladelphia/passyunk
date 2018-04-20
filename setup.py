@@ -4,6 +4,9 @@ setup(
     name='passyunk',
     version='1.0',
     packages=['passyunk', 'passyunk/pdata'],
+    package_data = {
+        '': ['*.csv'],
+    },
     url='',
     license='',
     author='tom.swanson',
