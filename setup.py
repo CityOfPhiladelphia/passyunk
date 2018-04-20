@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name='passyunk',
     version='1.0',
-    packages=[''],
+    packages=['passyunk'],
     url='',
     license='',
     author='tom.swanson',
