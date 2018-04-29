@@ -10,6 +10,7 @@ from .data import opa_account_re, zipcode_re, STATELIST, CITYLIST, CARDINAL_DIR,
     SUFFIX_IN_NAME
 
 is_cl_file = False
+is_al_file = False
 is_election_file = False
 is_zip_file = False
 

@@ -19,7 +19,7 @@ import re
 import sys
 import warnings
 
-from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2
+from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2, create_al_lookup
 from .data import opa_account_re, zipcode_re, po_box_re, mapreg_re, AddrType, \
     ILLEGAL_CHARS_RE
 from .election import create_election_lookup, get_election_info
@@ -29,6 +29,7 @@ from .zip4 import create_zip4_lookup, get_zip_info
 from .landmark import Landmark
 
 is_cl_file = False
+is_al_file = False
 is_election_file = False
 is_zip_file = False
 
@@ -148,6 +149,61 @@ def create_centerline_street_lookup():
     f.close()
     return lookup, lookup_list, lookup_name, lookup_pre, lookup_suffix
 
+# def create_centerline_alias_lookup():
+#     path = csv_path('alias_streets')
+#     f = open(path, 'r')
+#     lookup = {}
+#     lookup_name = {}
+#     lookup_pre = {}
+#     lookup_suffix = {}
+#     lookup_list = []
+#     i = 0
+#     j = 0
+#     jpre = 0
+#     jsuff = 0
+#
+#     try:
+#         reader = csv.reader(f)
+#         previous = ''
+#         rp = ''
+#         previous_pre_name = ''
+#         previous_suffix = ''
+#         for row in reader:
+#             r = CenterlineName(row)
+#             if i == 0:
+#                 rp = r
+#             current = r.name
+#             current_pre_name = r.pre + ' ' + r.name
+#             current_suffix = r.name + ' ' + r.suffix
+#             if current != previous and i != 0:
+#                 ack = [previous, j, i]
+#                 r2 = CenterlineNameOnly(ack)
+#                 lookup_name[previous] = r2
+#                 j = i
+#             if current_pre_name != previous_pre_name and i != 0:
+#                 ack = [previous_pre_name, jpre, i]
+#                 r2 = CenterlineNameOnly(ack)
+#                 if rp.pre != '':
+#                     lookup_pre[previous_pre_name] = r2
+#                 jpre = i
+#             if current_suffix != previous_suffix and i != 0:
+#                 ack = [previous_suffix, jsuff, i]
+#                 r2 = CenterlineNameOnly(ack)
+#                 if rp.suffix != '':
+#                     lookup_suffix[previous_suffix] = r2
+#                 jsuff = i
+#             lookup_list.append(r)
+#             lookup[r.full] = r
+#             rp = r
+#             previous = current
+#             previous_pre_name = current_pre_name
+#             previous_suffix = current_suffix
+#             i += 1
+#
+#     except IOError:
+#         print('Error opening ' + path, sys.exc_info()[0])
+#     f.close()
+#     return lookup, lookup_list, lookup_name, lookup_pre, lookup_suffix
 
 def create_full_names(address, addr_type):
     if addr_type == AddrType.opa_account or addr_type == AddrType.zipcode:
@@ -389,7 +445,6 @@ def parse(item, MAX_RANGE):
     if address_uber.type == AddrType.address and not address_uber.components.street.is_centerline_match:
         centerline_rematch(address.street)
 
-
     if address_uber.type == AddrType.intersection_addr:
         centerline_rematch(address.street)
         centerline_rematch(address.street_2)
@@ -407,7 +462,7 @@ def parse(item, MAX_RANGE):
         if address_uber.type == 'intersection_addr':
             get_cl_info_street2(address)
 
-    # check if landmark if address_uber.type = none, street or = intersection_addr with at least one non-matching streets
+    # check if landmark if address_uber.type = none, street or = intersection_addr with at least one non-matching street
     if address_uber.type == AddrType.none or (address_uber.type == AddrType.intersection_addr and (
                     address_uber.components.street.is_centerline_match == False or address_uber.components.street_2.is_centerline_match == False)):
         landmark.landmark_check()
@@ -632,6 +687,9 @@ cwd += '/pdata'
 street_centerline_lookup, street_centerline_name_lookup, cl_name_lookup, cl_pre_lookup, \
 cl_suffix_lookup = create_centerline_street_lookup()
 
+# alias_centerline_lookup, alias_centerline_name_lookup, al_name_lookup, al_pre_lookup, \
+# al_suffix_lookup = create_centerline_alias_lookup()
+
 # if the user doesn't have the zip4 or centerline file, parser will still work
 is_zip_file = create_zip4_lookup()
 if not is_zip_file:
@@ -639,6 +697,9 @@ if not is_zip_file:
 is_cl_file = create_cl_lookup()
 if not is_cl_file:
     warnings.warn('Centerline file not found.')
+is_al_file = create_al_lookup()
+if not is_al_file:
+    warnings.warn('Alias file not found.')
 is_election_file = create_election_lookup()
 if not is_election_file:
     warnings.warn('Election file not found.')
