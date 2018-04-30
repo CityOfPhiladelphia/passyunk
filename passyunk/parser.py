@@ -149,61 +149,6 @@ def create_centerline_street_lookup():
     f.close()
     return lookup, lookup_list, lookup_name, lookup_pre, lookup_suffix
 
-# def create_centerline_alias_lookup():
-#     path = csv_path('alias_streets')
-#     f = open(path, 'r')
-#     lookup = {}
-#     lookup_name = {}
-#     lookup_pre = {}
-#     lookup_suffix = {}
-#     lookup_list = []
-#     i = 0
-#     j = 0
-#     jpre = 0
-#     jsuff = 0
-#
-#     try:
-#         reader = csv.reader(f)
-#         previous = ''
-#         rp = ''
-#         previous_pre_name = ''
-#         previous_suffix = ''
-#         for row in reader:
-#             r = CenterlineName(row)
-#             if i == 0:
-#                 rp = r
-#             current = r.name
-#             current_pre_name = r.pre + ' ' + r.name
-#             current_suffix = r.name + ' ' + r.suffix
-#             if current != previous and i != 0:
-#                 ack = [previous, j, i]
-#                 r2 = CenterlineNameOnly(ack)
-#                 lookup_name[previous] = r2
-#                 j = i
-#             if current_pre_name != previous_pre_name and i != 0:
-#                 ack = [previous_pre_name, jpre, i]
-#                 r2 = CenterlineNameOnly(ack)
-#                 if rp.pre != '':
-#                     lookup_pre[previous_pre_name] = r2
-#                 jpre = i
-#             if current_suffix != previous_suffix and i != 0:
-#                 ack = [previous_suffix, jsuff, i]
-#                 r2 = CenterlineNameOnly(ack)
-#                 if rp.suffix != '':
-#                     lookup_suffix[previous_suffix] = r2
-#                 jsuff = i
-#             lookup_list.append(r)
-#             lookup[r.full] = r
-#             rp = r
-#             previous = current
-#             previous_pre_name = current_pre_name
-#             previous_suffix = current_suffix
-#             i += 1
-#
-#     except IOError:
-#         print('Error opening ' + path, sys.exc_info()[0])
-#     f.close()
-#     return lookup, lookup_list, lookup_name, lookup_pre, lookup_suffix
 
 def create_full_names(address, addr_type):
     if addr_type == AddrType.opa_account or addr_type == AddrType.zipcode:

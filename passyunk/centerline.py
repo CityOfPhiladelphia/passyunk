@@ -227,7 +227,7 @@ def create_al_lookup():
 
     validate_al_basename()
 
-    create_al_name_fw()
+    # create_al_name_fw()
 
     f.close()
     return True
@@ -255,28 +255,6 @@ def create_cl_name_fw():
         item.sort()
     return
 
-def create_al_name_fw():
-    # cl_name.sort()
-    for item in al_name:
-        # print(item)
-        if item == '':
-            continue
-        if len(item) <= 4:
-            continue
-        i = ord(item[0])
-        if i < 65 or i > 90:
-            continue
-        i -= 65
-        try:
-            al_name_fw[i].append(item)
-        except Exception:
-            print('Exception loading Alias for fw ' + item + ' ' + str(i), sys.exc_info()[0])
-
-    for item in al_name_fw:
-        # print(item[0],len(item))
-        item.pop(0)
-        item.sort()
-    return
 
 def oeb(fr, to):
     ret = 'U'
@@ -410,9 +388,8 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
 
         if len(matches) == 0:
             # good street name but no matching address range
-
-            # Check for alias
             aliases = is_al_base(addr_street_full)
+            # Check for alias
             if len(aliases) > 0:
                 matches = []
                 cur_closest = None
@@ -494,7 +471,52 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
             address.cl_addr_match = 'AM'
             # address.cl_addr_match = str(len(matches))
             return
+    # If there are no matching centerline names, check for alias
+    aliases = is_al_base(addr_street_full)
+    if len(aliases) > 0:
+        matches = []
+        cur_closest = None
+        cur_closest_offset = None
+        cur_closest_addr = 0
 
+        # Loop over matches
+        for al in aliases:
+            from_left = al.from_left
+            from_right = al.from_right
+            to_left = al.to_left
+            to_right = al.to_right
+
+            # Try to match on the left
+            if from_left <= addr_low_num <= to_left and \
+                            al.oeb_left == addr_parity:
+                # address.street.full = al.cl_name_full
+                # address.street.pre = al.cl_pre
+                # address.street.name = al.cl_name
+                # address.street.suffix = al.cl_suffix
+                # address.street.post = al.cl_post
+                addr_uber.components.street.full = al.cl_name_full
+                addr_uber.components.street.predir = al.cl_pre
+                addr_uber.components.street.name = al.cl_name
+                addr_uber.components.street.suffix = al.cl_suffix
+                addr_uber.components.street.postdir = al.cl_post
+
+                return get_cl_info(address, addr_uber, MAX_RANGE)
+
+            # Try to match on the right
+            elif from_right <= addr_low_num <= to_right and \
+                            al.oeb_right == addr_parity:
+                # address.street.full = al.cl_name_full
+                # address.street.pre = al.cl_pre
+                # address.street.name = al.cl_name
+                # address.street.suffix = al.cl_suffix
+                # address.street.post = al.cl_post
+                addr_uber.components.street.full = al.cl_name_full
+                addr_uber.components.street.predir = al.cl_pre
+                addr_uber.components.street.name = al.cl_name
+                addr_uber.components.street.suffix = al.cl_suffix
+                addr_uber.components.street.postdir = al.cl_post
+
+                return get_cl_info(address, addr_uber, MAX_RANGE)
     # If we didn't find a match using the street base (e.g. N 10TH ST), try
     # using the street name (10TH).
     centerlines = is_cl_name(address.street.name)
@@ -652,7 +674,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
 
             get_cl_info(address, addr_uber, MAX_RANGE)
             return
-
+    #TODO: Add attempts to match on alias street name w/ and w/o suffix as well as fuzzy matching
 # simple method for adding street_code to street_2
 def get_cl_info_street2(address):
 
