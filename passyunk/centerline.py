@@ -362,7 +362,6 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
     addr_street_full = address.street.full
     # Get matching centerlines based on street name
     centerlines = is_cl_base(addr_street_full)
-    aliases = is_al_base(addr_street_full)
     # If there are matches
     if len(centerlines) > 0:
         matches = []
@@ -413,6 +412,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
             # good street name but no matching address range
 
             # Check for alias
+            aliases = is_al_base(addr_street_full)
             if len(aliases) > 0:
                 matches = []
                 cur_closest = None
