@@ -12,7 +12,7 @@ cwd = os.path.dirname(__file__)
 cwd += '/pdata'
 # cwd = cwd.replace('\\','/')
 cl_file = 'centerline'
-al_file = 'alias_test'
+al_file = 'alias'
 
 # MAX_RANGE = 200
 
@@ -409,11 +409,14 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                     cur_closest_addr = to_right
 
         if len(matches) == 0:
+            print(412)
             # good street name but no matching address range
 
             # Check for alias
             aliases = is_al_base(addr_street_full)
+            print(addr_street_full)
             if len(aliases) > 0:
+                print(418)
                 matches = []
                 cur_closest = None
                 cur_closest_offset = None
