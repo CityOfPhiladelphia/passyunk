@@ -52,7 +52,9 @@ alias_stmt = '''
     order by st_name, pre_dir, st_type, suf_dir, l_f_add, l_t_add, r_f_add, r_t_add, st_code, seg_id
 '''.format(cl_table = street_centerline_table_name, alias_table = alias_table_name)
 
-alias_rows = etl.fromdb(dbo, alias_stmt).convert('SEG_ID', int).convert('ST_NAME', lambda s: standardize_name(s)) \
+alias_rows = etl.fromdb(dbo, alias_stmt).convert('SEG_ID', int) \
+    .convert('ST_NAME', lambda s: standardize_name(s)) \
+    .convert('CL_ST_NAME', lambda s: standardize_name(s)) \
     .addfield('CL_STREET_FULL', lambda a: concat_cl_streetname(a))
 alias_rows.tocsv(alias_csv)
 
