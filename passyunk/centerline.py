@@ -409,14 +409,11 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                     cur_closest_addr = to_right
 
         if len(matches) == 0:
-            print(412)
             # good street name but no matching address range
 
             # Check for alias
             aliases = is_al_base(addr_street_full)
-            print(addr_street_full)
             if len(aliases) > 0:
-                print(418)
                 matches = []
                 cur_closest = None
                 cur_closest_offset = None
@@ -432,33 +429,33 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                     # Try to match on the left
                     if from_left <= addr_low_num <= to_left and \
                                     al.oeb_left == addr_parity:
-                        # matches.append(al)
-                        # matches = []
-                        # cur_closest = None
-                        # cur_closest_offset = None
-                        # cur_closest_addr = 0
-                        address.street.full = al.cl_name_full
-                        address.street.pre = al.cl_pre
-                        address.street.name = al.cl_name
-                        address.street.suffix = al.cl_suffix
-                        address.street.post = al.cl_post
+                        # address.street.full = al.cl_name_full
+                        # address.street.pre = al.cl_pre
+                        # address.street.name = al.cl_name
+                        # address.street.suffix = al.cl_suffix
+                        # address.street.post = al.cl_post
                         addr_uber.components.street.full = al.cl_name_full
+                        addr_uber.components.street.predir = al.cl_pre
+                        addr_uber.components.street.name = al.cl_name
+                        addr_uber.components.street.suffix = al.cl_suffix
+                        addr_uber.components.street.postdir = al.cl_post
+
                         return get_cl_info(address, addr_uber, MAX_RANGE)
 
                     # Try to match on the right
                     elif from_right <= addr_low_num <= to_right and \
                                     al.oeb_right == addr_parity:
-                        # matches.append(al)
-                        # matches = []
-                        # cur_closest = None
-                        # cur_closest_offset = None
-                        # cur_closest_addr = 0
-                        address.street.full = al.cl_name_full
-                        address.street.pre = al.cl_pre
-                        address.street.name = al.cl_name
-                        address.street.suffix = al.cl_suffix
-                        address.street.post = al.cl_post
+                        # address.street.full = al.cl_name_full
+                        # address.street.pre = al.cl_pre
+                        # address.street.name = al.cl_name
+                        # address.street.suffix = al.cl_suffix
+                        # address.street.post = al.cl_post
                         addr_uber.components.street.full = al.cl_name_full
+                        addr_uber.components.street.predir = al.cl_pre
+                        addr_uber.components.street.name = al.cl_name
+                        addr_uber.components.street.suffix = al.cl_suffix
+                        addr_uber.components.street.postdir = al.cl_post
+
                         return get_cl_info(address, addr_uber, MAX_RANGE)
 
             if len(matches) == 0:
