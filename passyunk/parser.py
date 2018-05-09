@@ -420,7 +420,13 @@ def parse(item, MAX_RANGE):
             address = parse_addr_1(address, item)
             # Hack to process address steps below:
             address_uber.type = AddrType.address
+            get_cl_info(address, address_uber, MAX_RANGE)
+            if address_uber.components.street.is_centerline_match and address_uber.type == AddrType.none:
+                address_uber.type = AddrType.street
+            if address_uber.type == 'intersection_addr':
+                get_cl_info_street2(address)
 
+    create_full_names(address, address_uber.type)
     # if the users doesn't have the zip4 file, parser will still work
     if is_zip_file:
         get_zip_info(address, address_uber, MAX_RANGE)
@@ -478,6 +484,7 @@ def parse(item, MAX_RANGE):
         address_uber.type = AddrType.none
 
     temp_centerline = is_centerline_name(address_uber.components.street_2.full)
+
     if temp_centerline.full != '0':
         address_uber.components.street_2.is_centerline_match = True
 
@@ -580,6 +587,7 @@ def parse(item, MAX_RANGE):
     # Hack to set type back to landmark:
     if landmark.is_landmark:
         address_uber.type = AddrType.landmark
+
     return address_uber
 
 
