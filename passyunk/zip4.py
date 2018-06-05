@@ -12,7 +12,7 @@ __author__ = 'tom.swanson'
 cwd = os.path.dirname(__file__)
 cwd += '/pdata'
 # use the cleanded up file
-zip4file = 'uspszip4'
+zip4file = 'usps_zip4s'
 
 
 def csv_path(file_name):
