@@ -8,7 +8,7 @@ import boto3
 from passyunk.parser import PassyunkParser
 from config import get_dsn, get_bucket
 
-month = '2018_04'
+month = '2018_05'
 parser = PassyunkParser()
 
 # Input locations
@@ -18,12 +18,16 @@ zip4 = '/pa'
 
 # Output params
 s3_bucket = get_bucket()
-alias_outfile_path = 'usps_alias.csv'
-cityzip_outfile_path = 'usps_cityzip.csv'
-zip4_outfile_path = 'uspszip4.csv'
-temp_zip4_outfile_path = 't_uspszip4.csv'
 dsn = get_dsn('ais')
 connection = cx_Oracle.Connection(dsn)
+zip4_write_table_name = 'USPS_ZIP4S'
+cityzip_write_table_name = 'USPS_CITYZIP'
+alias_write_table_name = 'USPS_ALIAS'
+address_standardization_report_table_name = 'USPS_ZIP4_ADDRESS_CHECK'
+alias_outfile_path = alias_write_table_name + '.csv'
+cityzip_outfile_path = cityzip_write_table_name + '.csv'
+zip4_outfile_path = zip4_write_table_name + '.csv'
+temp_zip4_outfile_path = 'T_' + zip4_outfile_path
 #####################################
 # Meta:
 
@@ -117,7 +121,7 @@ cityzip_header = ['objectid', 'zipcode', 'citystate_key', 'zipclassificationcode
 
 zip4_header = ['objectid', 'zipcode', 'updatekey', 'actioncode', 'recordtype', 'pcr', 'streetpre',
                'streetname', 'streetsuff', 'streetpost', 'addrlow', 'addrhigh', 'addroeb', 'buildingorfirm',
-               'addrsecondaryabbr', 'addrsecondarylow', 'addrsecondaryhigh', 'adrsecondaryoeb', 'zip4low',
+               'addrsecondaryabbr', 'addrsecondarylow', 'addrsecondaryhigh', 'addrsecondaryoeb', 'zip4low',
                'zip4high', 'basealt', 'lacs', 'govtbldg', 'financeno', 'state', 'countyfips', 'congressno',
                'munikey', 'urbankey', 'preflastline']
 
@@ -133,7 +137,7 @@ zip4_mapping = OrderedDict([
     ('unit', 'addrsecondaryabbr'),
     ('unitlow', 'addrsecondarylow'),
     ('unithigh', 'addrsecondaryhigh'),
-    ('unitoeb', 'adrsecondaryoeb'),
+    ('unitoeb', 'addrsecondaryoeb'),
     ('buildingorfirm', 'buildingorfirm'),
     ('recordtype', 'recordtype'),
     ('zipcode', 'zipcode'),
@@ -311,7 +315,7 @@ for zip3 in zip3s:
                    'streetsuff': streetsuff, 'streetpost': streetpost, 'addrlow': addrlow.lstrip('0'),
                    'addrhigh': addrhigh.lstrip('0'), 'addroeb': addroeb, 'buildingorfirm': buildingorfirm,
                    'addrsecondaryabbr': addrsecondaryabbr, 'addrsecondarylow': addrsecondarylow.lstrip('0'),
-                   'addrsecondaryhigh': addrsecondaryhigh.lstrip('0'), 'adrsecondaryoeb': addrsecondaryoeb,
+                   'addrsecondaryhigh': addrsecondaryhigh.lstrip('0'), 'addrsecondaryoeb': addrsecondaryoeb,
                    'zip4low': zip4low, 'zip4high': zip4high, 'basealt': basealt, 'lacs': lacs, 'govtbldg': govtbldg,
                    'financeno': financeno, 'state': state, 'countyfips': countyfips, 'congressno': congressno,
                    'munikey': munikey, 'urbankey': urbankey, 'preflastline': preflastline}
@@ -343,7 +347,7 @@ with open(temp_zip4_outfile_path, 'w', newline='') as csvfile:
 
 #####################################
 # Create zip4 address standardization report:
-print("Writing address standardization report")
+print("Making address standardization report...")
 zip4_table = etl.fromcsv(temp_zip4_outfile_path)
 processed_rows = zip4_table.fieldmap(zip4_mapping) \
     .addfield('addr_comps', lambda a: [a['low'], a['pre'], a['name'], a['suffix'], a['post']]) \
@@ -375,11 +379,21 @@ processed_rows = zip4_table.fieldmap(zip4_mapping) \
     .cutout('addr_comps', 'parsed_comps', 'concat')
 
 print(etl.look(processed_rows))
-# Write address standardization report to DB:
-etl.todb(processed_rows, get_cursor, 'USPS_ZIP4_ADDRESS_CHECK')
+print("Writing tables to Databridge...")
+# address standardization report:
+# etl.todb(processed_rows, get_cursor, address_standardization_report_table_name)
+# other tables go to ais_sources account:
+dsn = get_dsn('ais_sources')
+connection = cx_Oracle.Connection(dsn)
+# zip4:
+etl.fromcsv(temp_zip4_outfile_path).todb(get_cursor, zip4_write_table_name)
+# cityzip:
+etl.fromcsv(cityzip_outfile_path).todb(get_cursor, cityzip_write_table_name)
+# alias:
+etl.fromcsv(alias_outfile_path).todb(get_cursor, alias_write_table_name)
 
 # Write processed_rows to uspszip4.csv:
-print("Writing cleaned_usps output to uspszip4.csv")
+print("Writing cleaned_usps output to {zip4_outfile_path}".format(zip4_outfile_path=zip4_outfile_path))
 etl.cutout(processed_rows, 'base', 'pre', 'name', 'suffix', 'post', 'change_pre', 'change_name', 'change_suffix', 'change_post') \
         .rename({'std_base': 'base', 'std_pre': 'pre', 'std_name': 'name', 'std_suffix': 'suffix', 'std_post': 'post'}) \
         .cut('street_full', 'pre', 'name', 'suffix', 'post', 'low', 'high', 'oeb', 'unit', 'unitlow', 'unithigh', 'unitoeb', 'buildingorfirm', 'recordtype', 'zipcode',	'zip4') \
@@ -389,7 +403,7 @@ etl.cutout(processed_rows, 'base', 'pre', 'name', 'suffix', 'post', 'change_pre'
         .tocsv(zip4_outfile_path, write_header=False)
 
 # Write processed_rows to s3:
-print("Writing uspszip4.csv to s3")
+print("Writing {zip4_outfile_path} to s3".format(zip4_outfile_path=zip4_outfile_path))
 # s3 = boto3.resource('s3', config=Config(proxies={'http': os.environ['HTTP_PROXY'], 'https': os.environ['HTTPS_PROXY']}))
 s3 = boto3.resource('s3')
 s3.meta.client.upload_file(zip4_outfile_path, s3_bucket, 'static files/' + zip4_outfile_path)
