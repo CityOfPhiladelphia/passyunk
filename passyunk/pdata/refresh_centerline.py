@@ -6,7 +6,7 @@ import re
 import string
 import petl as etl
 import cx_Oracle
-from passyunk.config import get_dsn
+from config import get_dsn
 from passyunk.namestd import StandardName
 
 dsn = get_dsn('ais_sources')
@@ -39,13 +39,15 @@ centerline_stmt = '''select trim(PRE_DIR) AS PRE_DIR,trim(ST_NAME) AS ST_NAME,tr
 
 centerline_rows = etl.fromdb(dbo, centerline_stmt).convert('ST_NAME', lambda s: standardize_name(s))
 
+print(etl.look(centerline_rows))
 centerline_rows.tocsv(centerline_csv)
 
 # Centerline_streets
 centerline_street_rows = centerline_rows.cut('PRE_DIR', 'ST_NAME', 'ST_TYPE') \
     .addfield('STREET_FULL', lambda a: concat_streetname(a)) \
     .addfield('POST_DIR', '') \
-    .cut('STREET_FULL', 'PRE_DIR', 'ST_NAME', 'ST_TYPE', 'POST_DIR')
+    .cut('STREET_FULL', 'PRE_DIR', 'ST_NAME', 'ST_TYPE', 'POST_DIR') \
+    .distinct()
 
 print(etl.look(centerline_street_rows))
 centerline_street_rows.tocsv(centerline_streets_csv, write_header=False)
