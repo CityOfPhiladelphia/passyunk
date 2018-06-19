@@ -47,7 +47,8 @@ centerline_street_rows = centerline_rows.cut('PRE_DIR', 'ST_NAME', 'ST_TYPE') \
     .addfield('STREET_FULL', lambda a: concat_streetname(a)) \
     .addfield('POST_DIR', '') \
     .cut('STREET_FULL', 'PRE_DIR', 'ST_NAME', 'ST_TYPE', 'POST_DIR') \
-    .distinct()
+    .distinct() \
+    .sort(key=['ST_NAME', 'PRE_DIR', 'ST_TYPE', 'POST_DIR'])
 
 print(etl.look(centerline_street_rows))
 centerline_street_rows.tocsv(centerline_streets_csv, write_header=False)
