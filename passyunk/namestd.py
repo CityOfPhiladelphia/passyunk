@@ -1,6 +1,6 @@
 import os, sys
 import csv
-
+from .parser_addr import nameStdLookup
 
 class StandardName:
     def __init__(self, tokens, do_ordinal):
@@ -26,7 +26,7 @@ class StandardName:
         cwd += '/pdata'
         return os.path.join(cwd, file_name + '.csv')
 
-
+    # This is run on parser initialization and imported above as nameStdLookup
     def createnamestdlookup(self):
         path = self.csv_path('std')
         with open(path, 'r') as f:
@@ -43,7 +43,7 @@ class StandardName:
 
     def is_name_std(self, test):
         try:
-            nstd = self.createnamestdlookup()[test]
+            nstd = nameStdLookup[test]
         except KeyError:
             row = ['', test]
             nstd = self.Namestd(row)
@@ -115,7 +115,6 @@ class StandardName:
         while i > 0:
             j = 0
             while j + i <= len(tokens):
-
                 nstd = self.is_name_std(' '.join(tokens[j:j + i]))
                 if nstd.correct != '':
                     tokens[j] = nstd.correct
