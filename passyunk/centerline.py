@@ -16,6 +16,7 @@ cwd += '/pdata'
 # cwd = cwd.replace('\\','/')
 #cl_file = 'centerline'
 al_file = 'alias'
+# cl_file = 'centerline'
 cl_file = 'centerline_shape'
 int_file = 'intersections'
 full_range_buffer = 17
@@ -352,6 +353,155 @@ def is_al_name(test):
         # row.append([' ', 0, 0])
         return row
     return al_list[name.low:name.high]
+
+def interpolate_line(line, distance_ratio, _buffer):
+	'''
+	Interpolate along a line with a buffer at both ends.
+	'''
+	length = line.length
+	buffered_length = length - (_buffer * 2)
+	buffered_distance = distance_ratio * buffered_length
+	absolute_distance = _buffer + buffered_distance
+	return line.interpolate(absolute_distance)
+
+
+def offset(line, point, distance, seg_side):
+    # Check for vertical line
+    if line.coords[0][0] == line.coords[1][0]:
+        pt_0 = line.coords[0]
+        pt_1 = line.coords[1]
+        upwards = True if pt_1[1] > pt_0[1] else False
+        if (upwards and seg_side == 'R') or (not upwards and seg_side == 'L'):
+            x_factor = 1
+        else:
+            x_factor = -1
+        return Point([point.x + (distance * x_factor), point.y])
+
+    assert None not in [line, point]
+    assert distance > 0
+    assert seg_side in ['L', 'R']
+
+    xsect_x = point.x
+    xsect_y = point.y
+    coord_1 = None
+    coord_2 = None
+
+    # Find coords on either side of intersect point
+    for i, coord in enumerate(line.coords[:-1]):
+        coord_x, coord_y = coord
+        next_coord = line.coords[i + 1]
+        next_coord_x, next_coord_y = next_coord
+        sandwich_x = coord_x < xsect_x < next_coord_x
+        sandwich_y = coord_y <= xsect_y <= next_coord_y
+        if sandwich_x or sandwich_y:
+            coord_1 = coord
+            coord_2 = next_coord
+            break
+
+    # Normalize coords to place in proper quadrant
+    norm_x = next_coord[0] - coord[0]
+    norm_y = next_coord[1] - coord[1]
+
+    # Get angle of seg
+    seg_angle = atan2(norm_y, norm_x)
+    # print('seg angle: {}'.format(degrees(seg_angle)))
+
+    # Get angle of offset line
+    if seg_side == 'L':
+        offset_angle = seg_angle + (pi / 2)
+    else:
+        offset_angle = seg_angle - (pi / 2)
+    # print('offset angle: {}'.format(degrees(offset_angle)))
+
+    # Get offset point
+    delta_x = cos(offset_angle) * distance
+    delta_y = sin(offset_angle) * distance
+    x = xsect_x + delta_x
+    y = xsect_y + delta_y
+    return Point([x, y])
+
+
+def get_street_geom(address):
+    # TODO: use centerlines in state
+    centerlines = is_cl_name(address.street.name)
+    coords = []
+    for centerline in centerlines:
+        coords.append(loads(centerline.shape))
+    multilinestring = MultiLineString(coords)
+    xy = multilinestring.centroid
+    snapped = multilinestring.interpolate(multilinestring.project(xy))
+    geom = mapping(snapped)
+    address.geometry = geom
+
+
+def get_midpoint_geom(address, match):
+    cl_shape = loads(address.street.shape)
+    xy = cl_shape.centroid
+    addr_low_num = address.address.low_num
+    # apply offset only if there's an addr_low_num
+    if addr_low_num != -1:
+        f_r = match.from_right
+        seg_side = "R" if f_r % 2 == addr_low_num % 2 else "L"
+        xy_offset = offset(cl_shape, xy, centerline_offset, seg_side)
+        geom = mapping(xy_offset)
+    else:
+        geom = mapping(xy)
+    address.geometry = geom
+
+
+def get_full_range_geom(address, match):
+    addr_low_num = address.address.low_num
+    cl_shape = loads(address.street.shape)
+    f_l = match.from_left
+    f_r = match.from_right
+    t_l = match.to_left
+    t_r = match.to_right
+    seg_side = "R" if f_r % 2 == addr_low_num % 2 else "L"
+    # Check if address low num is within centerline seg full address range with parity:
+    from_num, to_num = (f_r, t_r) if seg_side == "R" else (
+    f_l, t_l)
+    side_delta = to_num - from_num
+    if side_delta == 0:
+        distance_ratio = 0.5
+    else:
+        distance_ratio = (addr_low_num - from_num) / side_delta
+    xy = interpolate_line(cl_shape, distance_ratio, full_range_buffer)
+    xy_offset = offset(cl_shape, xy, centerline_offset, seg_side)
+
+    geom = mapping(xy_offset)
+    address.geometry = geom
+
+
+def get_int_geom(address):
+    street_1_code = min(int(address.street.street_code), int(address.street_2.street_code))
+    street_2_code = max(int(address.street.street_code), int(address.street_2.street_code))
+    is_int_file = test_file(int_file)
+    if not is_int_file:
+        return False
+    path = csv_path(int_file)
+    with open(path) as infile:
+        reader = csv.reader(infile)
+        next(reader, None)
+        for row in reader:
+            intersection = Intersection(row)
+            if int(intersection.street_1_code) == street_1_code and int(intersection.street_2_code) == street_2_code:
+                geom = mapping(loads(intersection.shape))
+                address.geometry = geom
+
+
+def get_address_geom(address, addr_uber=None, match=None):
+    type = addr_uber.type
+    if type == 'street':
+        get_street_geom(address)
+    elif type == 'address':
+        get_full_range_geom(address, match)
+    elif type == 'intersection_addr':
+        if address.street.street_code and address.street_2.street_code:
+            get_int_geom(address)
+    else:
+        pass
+    return address.geometry
+
 
 def interpolate_line(line, distance_ratio, _buffer):
 	'''

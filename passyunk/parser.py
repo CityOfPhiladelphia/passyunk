@@ -19,7 +19,6 @@ import re
 import sys
 import warnings
 from copy import deepcopy
-
 from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2, create_al_lookup, get_address_geom
 from .data import opa_account_re, zipcode_re, po_box_re, mapreg_re, AddrType, \
     ILLEGAL_CHARS_RE
@@ -426,6 +425,8 @@ def parse(item, MAX_RANGE):
                 address_uber.type = AddrType.street
             if address_uber.type == 'intersection_addr':
                 get_cl_info_street2(address)
+
+            # get_address_geom(address, addr_uber=address_uber, match=address.street)
 
     create_full_names(address, address_uber.type)
     # if the users doesn't have the zip4 file, parser will still work
