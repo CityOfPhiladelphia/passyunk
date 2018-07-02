@@ -420,6 +420,22 @@ def offset(line, point, distance, seg_side):
     return Point([x, y])
 
 
+def project_shape(shape, from_srid, to_srid):
+    from functools import partial
+    import pyproj
+    from shapely.ops import transform
+
+    project = partial(
+        pyproj.transform,
+        # source coordinate system; preserve_units so that pyproj does not
+        # assume meters
+        pyproj.Proj(init='epsg:{}'.format(from_srid), preserve_units=True),
+        # destination coordinate system
+        pyproj.Proj(init='epsg:{}'.format(to_srid), preserve_units=True))
+
+    return transform(project, shape)
+
+
 def get_street_geom(address):
     # TODO: use centerlines in state
     centerlines = is_cl_name(address.street.name)
@@ -465,9 +481,10 @@ def get_full_range_geom(address, match):
     else:
         distance_ratio = (addr_low_num - from_num) / side_delta
     xy = interpolate_line(cl_shape, distance_ratio, full_range_buffer)
+    # geom = mapping(xy)
     xy_offset = offset(cl_shape, xy, centerline_offset, seg_side)
-
-    geom = mapping(xy_offset)
+    geom = project_shape(xy_offset, 2272, 4326)
+    geom = mapping(geom)
     address.geometry = geom
 
 
@@ -608,6 +625,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                 if addr_low_num == -1 and cur_closest is not None:
                     address.street.street_code = cur_closest.street_code
                     address.street.is_centerline_match = True
+                    address.street.shape = cur_closest.shape
                     return
 
                 if cur_closest_offset is not None and cur_closest_offset < MAX_RANGE:
@@ -616,6 +634,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                     address.cl_responsibility = cur_closest.cl_responsibility
                     address.cl_addr_match = 'RANGE:' + str(cur_closest_offset)
                     address.address.full = str(cur_closest_addr)
+                    address.street.shape = cur_closest.shape
                     return
 
                 # Treat as a Street Match
@@ -629,7 +648,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                 address.street.street_code = cur_closest.street_code
                 address.street.shape = cur_closest.shape
                 address.street.is_centerline_match = True
-                address.geometry = get_address_geom(address, addr_uber=addr_uber, match=cur_closest)
+                get_address_geom(address, addr_uber=addr_uber, match=cur_closest)
                 return
 
             if cur_closest_offset is not None and cur_closest_offset < MAX_RANGE:
@@ -657,7 +676,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
             address.cl_seg_id = match.cl_seg_id
             address.cl_responsibility = match.cl_responsibility
             address.cl_addr_match = 'A'
-            address.geometry = get_address_geom(address, addr_uber=addr_uber, match=match)
+            get_address_geom(address, addr_uber=addr_uber, match=match)
             return
 
         # Exact Street match, multiple range matches, return the count of matches
@@ -665,7 +684,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
             address.street.street_code = cl.street_code
             address.street.shape = cl.shape
             address.cl_addr_match = 'AM'
-            address.geometry = get_address_geom(address, addr_uber=addr_uber, match=match)
+            get_address_geom(address, addr_uber=addr_uber, match=match)
             # address.cl_addr_match = str(len(matches))
             return
     # If there are no matching centerline names, check for alias
@@ -880,10 +899,8 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
     #TODO: Add attempts to match on alias street name w/ and w/o suffix as well as fuzzy matching
 # simple method for adding street_code to street_2
 def get_cl_info_street2(address):
-
     # Get matching centerlines based on street name
     centerlines = is_cl_base(address.street_2.full)
-
     # If there are matches
     if len(centerlines) > 0:
         address.street_2.street_code = centerlines[0].street_code
