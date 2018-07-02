@@ -6,14 +6,14 @@ import re
 import string
 import petl as etl
 import cx_Oracle
-from config import get_dsn
+from passyunk.config import get_dsn
 from passyunk.namestd import StandardName
 
 dsn = get_dsn('ais_sources')
 dbo = cx_Oracle.connect(dsn)
 alias_table_name = 'alias_list_ais'
 street_centerline_table_name = 'gis_streets.street_centerline'
-centerline_csv = 'centerline.csv'
+centerline_csv = 'centerline_shape.csv'
 centerline_streets_csv = 'centerline_streets.csv'
 
 def concat_streetname(row):
@@ -34,7 +34,7 @@ def standardize_name(name):
 
 
 centerline_stmt = '''select trim(PRE_DIR) AS PRE_DIR,trim(ST_NAME) AS ST_NAME,trim(ST_TYPE) AS ST_TYPE,trim(SUF_DIR) AS SUF_DIR,
-            L_F_ADD,L_T_ADD,R_F_ADD,R_T_ADD,ST_CODE,SEG_ID,trim(RESPONSIBL) AS RESPONSIBL from {} 
+            L_F_ADD,L_T_ADD,R_F_ADD,R_T_ADD,ST_CODE,SEG_ID,trim(RESPONSIBL) AS RESPONSIBL,  sde.st_astext(shape) as "SHAPE" from {} 
            order by st_name, pre_dir, st_type, suf_dir, l_f_add, l_t_add, r_f_add, r_t_add, st_code, seg_id'''.format(street_centerline_table_name)
 
 centerline_rows = etl.fromdb(dbo, centerline_stmt).convert('ST_NAME', lambda s: standardize_name(s))
