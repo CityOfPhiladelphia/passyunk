@@ -591,11 +591,6 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                     # Try to match on the left
                     if from_left <= addr_low_num <= to_left and \
                                     al.oeb_left == addr_parity:
-                        # address.street.full = al.cl_name_full
-                        # address.street.pre = al.cl_pre
-                        # address.street.name = al.cl_name
-                        # address.street.suffix = al.cl_suffix
-                        # address.street.post = al.cl_post
                         addr_uber.components.street.full = al.cl_name_full
                         addr_uber.components.street.predir = al.cl_pre
                         addr_uber.components.street.name = al.cl_name
@@ -607,11 +602,6 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                     # Try to match on the right
                     elif from_right <= addr_low_num <= to_right and \
                                     al.oeb_right == addr_parity:
-                        # address.street.full = al.cl_name_full
-                        # address.street.pre = al.cl_pre
-                        # address.street.name = al.cl_name
-                        # address.street.suffix = al.cl_suffix
-                        # address.street.post = al.cl_post
                         addr_uber.components.street.full = al.cl_name_full
                         addr_uber.components.street.predir = al.cl_pre
                         addr_uber.components.street.name = al.cl_name
@@ -684,7 +674,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
             address.street.street_code = cl.street_code
             address.street.shape = cl.shape
             address.cl_addr_match = 'AM'
-            get_address_geom(address, addr_uber=addr_uber, match=match)
+            get_address_geom(address, addr_uber=addr_uber, match=cl)
             # address.cl_addr_match = str(len(matches))
             return
     # If there are no matching centerline names, check for alias
@@ -705,11 +695,6 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
             # Try to match on the left
             if from_left <= addr_low_num <= to_left and \
                             al.oeb_left == addr_parity:
-                # address.street.full = al.cl_name_full
-                # address.street.pre = al.cl_pre
-                # address.street.name = al.cl_name
-                # address.street.suffix = al.cl_suffix
-                # address.street.post = al.cl_post
                 addr_uber.components.street.full = al.cl_name_full
                 addr_uber.components.street.predir = al.cl_pre
                 addr_uber.components.street.name = al.cl_name
@@ -721,11 +706,6 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
             # Try to match on the right
             elif from_right <= addr_low_num <= to_right and \
                             al.oeb_right == addr_parity:
-                # address.street.full = al.cl_name_full
-                # address.street.pre = al.cl_pre
-                # address.street.name = al.cl_name
-                # address.street.suffix = al.cl_suffix
-                # address.street.post = al.cl_post
                 addr_uber.components.street.full = al.cl_name_full
                 addr_uber.components.street.predir = al.cl_pre
                 addr_uber.components.street.name = al.cl_name
