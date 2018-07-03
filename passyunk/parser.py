@@ -19,7 +19,6 @@ import re
 import sys
 import warnings
 from copy import deepcopy
-from shapely.wkt import loads
 from shapely.geometry import mapping
 from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2, create_al_lookup, get_address_geom
 from .data import opa_account_re, zipcode_re, po_box_re, mapreg_re, AddrType, \
@@ -595,6 +594,7 @@ def parse(item, MAX_RANGE):
 
     del address_uber.components.street.shape
     del address_uber.components.street_2.shape
+    del landmark
 
     return address_uber
 

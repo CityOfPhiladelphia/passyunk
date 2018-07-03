@@ -61,10 +61,6 @@ class Address:
         self.address_unit = Unit()
         self.mailing = Mailing()
         self.election = Election()
-        # self.zipcode = ''
-        # self.mailing.zip4 = ''
-        # self.matchdesc = ''
-        # self.street_code = ''
         self.cl_seg_id = ''
         self.cl_responsibility = ''
         self.cl_addr_match = ''
