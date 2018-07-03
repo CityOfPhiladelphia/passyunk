@@ -135,9 +135,11 @@ def test_file(file):
     path = csv_path(file)
     return os.path.isfile(path)
 
+
 def test_al_file():
     path = csv_path(al_file)
     return os.path.isfile(path)
+
 
 def create_cl_lookup():
     is_cl_file = test_file(cl_file)
@@ -306,6 +308,7 @@ def validate_cl_basename():
             for ack in name:
                 print(ack)
 
+
 def validate_al_basename():
     for r in al_basename:
         row = al_basename[r]
@@ -317,6 +320,7 @@ def validate_al_basename():
             for ack in name:
                 print(ack)
 
+
 def is_cl_base(test):
     try:
         name = cl_basename[test]
@@ -325,6 +329,7 @@ def is_cl_base(test):
         # row.append([' ', 0, 0])
         return row
     return cl_list[name.low:name.high]
+
 
 def is_al_base(test):
     try:
@@ -335,6 +340,7 @@ def is_al_base(test):
         return row
     return al_list[name.low:name.high]
 
+
 def is_cl_name(test):
     try:
         name = cl_name[test]
@@ -344,6 +350,7 @@ def is_cl_name(test):
         return row
     return cl_list[name.low:name.high]
 
+
 def is_al_name(test):
     try:
         name = al_name[test]
@@ -352,6 +359,7 @@ def is_al_name(test):
         # row.append([' ', 0, 0])
         return row
     return al_list[name.low:name.high]
+
 
 def interpolate_line(line, distance_ratio, _buffer):
 	'''
