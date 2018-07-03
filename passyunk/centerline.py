@@ -585,20 +585,8 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                     to_left = al.to_left
                     to_right = al.to_right
 
-                    # Try to match on the left
-                    if from_left <= addr_low_num <= to_left and \
-                                    al.oeb_left == addr_parity:
-                        addr_uber.components.street.full = al.cl_name_full
-                        addr_uber.components.street.predir = al.cl_pre
-                        addr_uber.components.street.name = al.cl_name
-                        addr_uber.components.street.suffix = al.cl_suffix
-                        addr_uber.components.street.postdir = al.cl_post
-
-                        return get_cl_info(address, addr_uber, MAX_RANGE)
-
-                    # Try to match on the right
-                    elif from_right <= addr_low_num <= to_right and \
-                                    al.oeb_right == addr_parity:
+                    if (from_left <= addr_low_num <= to_left and al.oeb_left == addr_parity) or (
+                                from_right <= addr_low_num <= to_right and al.oeb_right == addr_parity):
                         addr_uber.components.street.full = al.cl_name_full
                         addr_uber.components.street.predir = al.cl_pre
                         addr_uber.components.street.name = al.cl_name
@@ -674,34 +662,15 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
         matches = []
         for row in centerlines:
             if row.from_left <= addr_low_num <= row.to_left and row.oeb_left == addr_parity:
-                if (address.street.predir != '' and address.street.predir == row.pre) or (
-                                address.street.predir == '' and row.pre == '') or (
-                                address.street.predir == '' and row.pre != '') or (
-                                address.street.predir != '' and row.pre == ''):
-                    if (address.street.postdir != '' and address.street.postdir == row.post) or (
-                                    address.street.postdir == '' and row.post == '') or (
-                                    address.street.postdir == '' and row.post != '') or (
-                                    address.street.postdir != '' and row.post == ''):
-                        if (address.street.suffix != '' and address.street.suffix == row.suffix) or (
-                                        address.street.suffix == '' and row.suffix == '') or (
-                                        address.street.suffix == '' and row.suffix != '') or (
-                                        address.street.suffix != '' and row.suffix == ''):
+                if address.street.predir == row.pre or '' in [address.street.predir, row.pre]:
+                    if address.street.postdir == row.post or '' in [address.street.postdir, row.post]:
+                        if address.street.suffix == row.suffix or '' in [address.street.suffix, row.suffix]:
                             matches.append(row)
             elif row.from_right <= addr_low_num <= row.to_right and row.oeb_right == addr_parity:
-                if (address.street.predir != '' and address.street.predir == row.pre) or (
-                                address.street.predir == '' and row.pre == '') or (
-                                address.street.predir == '' and row.pre != '') or (
-                                address.street.predir != '' and row.pre == ''):
-                    if (address.street.postdir != '' and address.street.postdir == row.post) or (
-                                    address.street.postdir == '' and row.post == '') or (
-                                    address.street.postdir == '' and row.post != '') or (
-                                    address.street.postdir != '' and row.post == ''):
-                        if (address.street.suffix != '' and address.street.suffix == row.suffix) or (
-                                        address.street.suffix == '' and row.suffix == '') or (
-                                        address.street.suffix == '' and row.suffix != '') or (
-                                        address.street.suffix != '' and row.suffix == ''):
+                if address.street.predir == row.pre or '' in [address.street.predir, row.pre]:
+                    if address.street.postdir == row.post or '' in [address.street.postdir, row.post]:
+                        if address.street.suffix == row.suffix or '' in [address.street.suffix, row.suffix]:
                             matches.append(row)
-
         # Let's just see if a match to the street name can be made.  If there is only one match, it should be safe to use
         # at this point.  The only difference in logic below from above is that suffixes do not have to match
         # 1018 ALPENA DR - should find RD
@@ -709,32 +678,14 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
             matches = []
             for row in centerlines:
                 if row.from_left <= addr_low_num <= row.to_left and row.oeb_left == addr_parity:
-                    if (address.street.predir != '' and address.street.predir == row.pre) or (
-                                    address.street.predir == '' and row.pre == '') or (
-                                    address.street.predir == '' and row.pre != '') or (
-                                    address.street.predir != '' and row.pre == ''):
-                        if (address.street.postdir != '' and address.street.postdir == row.post) or (
-                                        address.street.postdir == '' and row.post == '') or (
-                                        address.street.postdir == '' and row.post != '') or (
-                                        address.street.postdir != '' and row.post == ''):
-                            if (address.street.suffix != '' and address.street.suffix != row.suffix) or (
-                                            address.street.suffix == '' and row.suffix == '') or (
-                                            address.street.suffix == '' and row.suffix != '') or (
-                                            address.street.suffix != '' and row.suffix == ''):
+                    if address.street.predir == row.pre or '' in [address.street.predir, row.pre]:
+                        if address.street.postdir == row.post or '' in [address.street.postidr, row.post]:
+                            if (address.street.suffix != '' and address.street.suffix != row.suffix) or '' in [address.street.suffix, row.suffix]:
                                 matches.append(row)
                 elif row.from_right <= addr_low_num <= row.to_right and row.oeb_right == addr_parity:
-                    if (address.street.predir != '' and address.street.predir == row.pre) or (
-                                    address.street.predir == '' and row.pre == '') or (
-                                    address.street.predir == '' and row.pre != '') or (
-                                    address.street.predir != '' and row.pre == ''):
-                        if (address.street.postdir != '' and address.street.postdir == row.post) or (
-                                        address.street.postdir == '' and row.post == '') or (
-                                        address.street.postdir == '' and row.post != '') or (
-                                        address.street.postdir != '' and row.post == ''):
-                            if (address.street.suffix != '' and address.street.suffix != row.suffix) or (
-                                            address.street.suffix == '' and row.suffix == '') or (
-                                            address.street.suffix == '' and row.suffix != '') or (
-                                            address.street.suffix != '' and row.suffix == ''):
+                    if address.street.predir == row.pre or '' in [address.street.predir, row.pre]:
+                        if address.street.postdir == row.post or '' in [address.street.postdir, row.post]:
+                            if (address.street.suffix != '' and address.street.suffix != row.suffix) or '' in [address.street.suffix, row.suffix]:
                                 matches.append(row)
 
             if len(matches) == 0:
