@@ -19,6 +19,8 @@ import re
 import sys
 import warnings
 from copy import deepcopy
+from shapely.wkt import loads
+from shapely.geometry import mapping
 from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2, create_al_lookup, get_address_geom
 from .data import opa_account_re, zipcode_re, po_box_re, mapreg_re, AddrType, \
     ILLEGAL_CHARS_RE
@@ -586,9 +588,10 @@ def parse(item, MAX_RANGE):
         address_uber.components.output_address = None
     if address_uber.type == '':
         address_uber.type = None
-    # Hack to set type back to landmark:
+    # Hack to set type back to landmark & assign geometry for non-addressed landmarks
     if landmark.is_landmark:
         address_uber.type = AddrType.landmark
+        address.geometry = mapping(landmark.landmark_shape) if not landmark.landmark_address else address.geometry
 
     del address_uber.components.street.shape
     del address_uber.components.street_2.shape
