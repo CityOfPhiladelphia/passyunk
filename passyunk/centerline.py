@@ -8,6 +8,7 @@ from fuzzywuzzy import process
 from shapely.wkt import loads
 from shapely.geometry import mapping, Point, MultiLineString
 from math import sin, cos, atan2, pi
+from .data import AddrType
 
 __author__ = 'tom.swanson'
 
@@ -38,6 +39,7 @@ al_basename = {}
 al_list = []
 al_name = {}
 al_name_fw = []
+int_map = {}
 
 for x in range(0, 26):
     cl_name_fw.append([x])
@@ -136,11 +138,6 @@ def test_file(file):
     return os.path.isfile(path)
 
 
-def test_al_file():
-    path = csv_path(al_file)
-    return os.path.isfile(path)
-
-
 def create_cl_lookup():
     is_cl_file = test_file(cl_file)
     if not is_cl_file:
@@ -198,7 +195,7 @@ def create_cl_lookup():
 
 
 def create_al_lookup():
-    is_al_file = test_al_file()
+    is_al_file = test_file(al_file)
     if not is_al_file:
         return False
     path = csv_path(al_file)
@@ -245,12 +242,33 @@ def create_al_lookup():
     ack = [p_base, jbase - 1, i - 1]
     r2 = NameOnly(ack)
     al_basename[p_base] = r2
-
     validate_al_basename()
-
     # create_al_name_fw()
 
     f.close()
+    return True
+
+
+def create_int_lookup():
+    is_int_file = test_file(int_file)
+    if not is_int_file:
+        return False
+    path = csv_path(int_file)
+    try:
+        with open(path, "r") as f:
+            reader = csv.reader(f)
+            header = next(reader)
+            for row in reader:
+                row_map = dict(zip(header, row))
+                # Add street_1 & street_2
+                if row[0] not in int_map:
+                    int_map[row[0]] = []
+                if row[1] not in int_map:
+                    int_map[row[1]] = []
+                int_map[row[0]].append(row_map)
+                int_map[row[1]].append(row_map)
+    except IOError:
+        print('Error opening ' + path, sys.exc_info()[0])
     return True
 
 
@@ -438,15 +456,27 @@ def project_shape(shape, from_srid, to_srid):
 
 
 def get_street_geom(address):
-    # TODO: use centerlines in state
     centerlines = is_cl_name(address.street.name)
     coords = []
-    for centerline in centerlines:
-        coords.append(loads(centerline.shape))
+    if address.street.predir:
+        for centerline in centerlines:
+            if centerline.pre == address.street.predir:
+                coords.append(loads(centerline.shape))
+    # No predir
+    else:
+        # Try to match to centerlines with no predir
+        for centerline in centerlines:
+            if centerline.pre == '':
+                coords.append(loads(centerline.shape))
+        # If no matches, use get midpoint of matching named centerlines with any predirs
+        if not coords:
+            for centerline in centerlines:
+                coords.append(loads(centerline.shape))
     multilinestring = MultiLineString(coords)
     xy = multilinestring.centroid
     snapped = multilinestring.interpolate(multilinestring.project(xy))
-    geom = mapping(snapped)
+    geom = project_shape(snapped, 2272, 4326)
+    geom = mapping(geom)
     address.geometry = geom
 
 
@@ -459,7 +489,8 @@ def get_midpoint_geom(address, match):
         f_r = match.from_right
         seg_side = "R" if f_r % 2 == addr_low_num % 2 else "L"
         xy_offset = offset(cl_shape, xy, centerline_offset, seg_side)
-        geom = mapping(xy_offset)
+        geom = project_shape(xy_offset, 2272, 4326)
+        geom = mapping(geom)
     else:
         geom = mapping(xy)
     address.geometry = geom
@@ -491,40 +522,56 @@ def get_full_range_geom(address, match):
 def get_int_geom(address):
     street_1_code = min(int(address.street.street_code), int(address.street_2.street_code))
     street_2_code = max(int(address.street.street_code), int(address.street_2.street_code))
-    is_int_file = test_file(int_file)
-    if not is_int_file:
-        return False
-    path = csv_path(int_file)
-    with open(path) as infile:
-        reader = csv.reader(infile)
-        next(reader, None)
-        for row in reader:
-            intersection = Intersection(row)
-            if int(intersection.street_1_code) == street_1_code and int(intersection.street_2_code) == street_2_code:
-                geom = mapping(loads(intersection.shape))
-                address.geometry = geom
+    int_map_row = int_map[str(street_1_code)]
+    for row in int_map_row:
+        if int(row['street_2_code']) == street_2_code:
+            geom = mapping(loads(row['shape']))
+            address.geometry = geom
 
 
 def get_address_geom(address, addr_uber=None, match=None):
-    type = addr_uber.type
-    if type == 'street':
+    if not addr_uber.type or addr_uber.type == AddrType.none:
+        return
+    if addr_uber.type == AddrType.street:
         get_street_geom(address)
-    elif type == 'address':
+    elif addr_uber.type == AddrType.address:
         get_full_range_geom(address, match)
-    elif type == 'intersection_addr':
+    elif addr_uber.type == AddrType.intersection_addr:
         if address.street.street_code and address.street_2.street_code:
             get_int_geom(address)
     else:
         pass
     return address.geometry
 
-def assign_cl_info(address, match):
+
+#TODO: add street name components
+def assign_cl_info(address, match, seg_match):
     address.street.street_code = match.street_code
-    address.cl_seg_id = match.cl_seg_id
-    address.cl_responsibility = match.cl_responsibility
     address.street.shape = match.shape
+    address.cl_seg_id = match.cl_seg_id if seg_match else None
+    address.cl_responsibility = match.cl_responsibility if seg_match else None
+    address.street.name = match.name
+    address.street.predir = match.pre
+    address.street.post = match.post
+    address.street.suffix = match.suffix
+
+
+def assign_cl2_info(address, match):
+    address.street_2.street_code = match.street_code
+    address.street_2.shape = match.shape
+    address.street_2.name = match.name
+    address.street_2.predir = match.pre
+    address.street_2.post = match.post
+    address.street_2.suffix = match.suffix
+
 
 def get_cl_info(address, addr_uber, MAX_RANGE):
+    '''
+    1. Get list of centerlines with matching full street name (including predir and suffix)
+    2. If no matches, try aliases
+    3. If no alias matches, get list of centerlines with only matching street name
+        a. first try with name and suffix, then if no matches just with name
+    '''
     addr_low_num = address.address.low_num
     addr_parity = address.address.parity
     addr_street_full = address.street.full
@@ -606,60 +653,52 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
             if len(matches) == 0:
             # Didn't find an alias match
                 if addr_low_num == -1 and cur_closest is not None:
+                    # Valid street match, not an address
+                    addr_uber.type = AddrType.street
                     address.street.is_centerline_match = True
-                    address.street.street_code = cur_closest.street_code
-                    address.street.shape = cur_closest.shape
-                    # assign_cl_info(address, cur_closest)
+                    # address.street.street_code = cur_closest.street_code
+                    # address.street.shape = cur_closest.shape
+                    assign_cl_info(address, cur_closest, False)
+                    get_address_geom(address, addr_uber)
+                    if address.street_2.full:
+                        # Check if valid street_2 and if so then look for intersection
+                        get_cl_info_street2(address, addr_uber, centerlines)
                     return
 
                 if cur_closest_offset is not None and cur_closest_offset < MAX_RANGE:
+                    # Out of range address matching a valid street
                     address.cl_addr_match = 'RANGE:' + str(cur_closest_offset)
                     address.address.full = str(cur_closest_addr)
-                    assign_cl_info(address, cur_closest)
+                    assign_cl_info(address, cur_closest, True)
+                    # TODO: Return closest address match
                     return
 
-                # Treat as a Street Match
-                if addr_uber.type != 'intersection_addr':
-                    addr_uber.type = 'street'
-                address.street.street_code = cl.street_code
-                address.cl_addr_match = 'MATCH TO STREET. ADDR NUMBER NO MATCH'
+                if address.street_2.full:
+                    # Check if valid street_2 and if so then look for intersection
+                    get_cl_info_street2(address, addr_uber, centerlines)
+                else:
+                    # Treat as a Street Match
+                    addr_uber.type = AddrType.street
+                    address.cl_addr_match = 'MATCH TO STREET. ADDR NUMBER NO MATCH'
+                    assign_cl_info(address, cl, False)
+                    # address.street.street_code = cl.street_code
+                    get_address_geom(address, addr_uber)
                 return
-
-            if addr_low_num == -1 and cur_closest is not None:
-                address.street.is_centerline_match = True
-                address.street.street_code = cur_closest.street_code
-                address.street.shape = cur_closest.shape
-                # assign_cl_info(address, cur_closest)
-                get_address_geom(address, addr_uber=addr_uber, match=cur_closest)
-                return
-
-            if cur_closest_offset is not None and cur_closest_offset < MAX_RANGE:
-                address.cl_addr_match = 'RANGE:' + str(cur_closest_offset)
-                address.address.full = str(cur_closest_addr)
-                assign_cl_info(address, cur_closest)
-                return
-
-            # Treat as a Street Match
-            addr_uber.type = 'street'
-            address.street.street_code = cl.street_code
-            address.street.shape = cl.shape
-            get_address_geom(address, addr_uber=addr_uber, match=cl)
-            address.cl_addr_match = 'MATCH TO STREET. ADDR NUMBER NO MATCH'
-            return
 
         # Exact Match
         if len(matches) == 1:
             match = matches[0]
             address.cl_addr_match = 'A'
-            assign_cl_info(address, match)
+            assign_cl_info(address, match, True)
             get_address_geom(address, addr_uber=addr_uber, match=match)
             return
 
         # Exact Street match, multiple range matches, return the count of matches
         if len(matches) > 1:
             address.cl_addr_match = 'AM'
-            address.street.street_code = cl.street_code
-            address.street.shape = cl.shape
+            # address.street.street_code = cl.street_code
+            # address.street.shape = cl.shape
+            assign_cl_info(address, cl, False)
             get_address_geom(address, addr_uber=addr_uber, match=cl)
             # address.cl_addr_match = str(len(matches))
             return
@@ -700,6 +739,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                 address.cl_addr_match = 'NONE'
                 return
 
+
             if len(matches) > 1:
                 address.cl_addr_match = 'MULTI2'
                 return
@@ -719,7 +759,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                     address.street.suffix = match.suffix
 
                 address.cl_addr_match = match_type
-                assign_cl_info(address, match)
+                assign_cl_info(address, match, True)
                 address.geometry = get_address_geom(address, addr_uber=addr_uber, match=match)
                 return
 
@@ -744,16 +784,16 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                 address.street.suffix = match.suffix
 
             address.cl_addr_match = match_type
-            assign_cl_info(address, match)
+            assign_cl_info(address, match, True)
             address.geometry = get_address_geom(address, addr_uber=addr_uber, match=match)
             return
 
         # need to resolve dir and/or suffix
         if len(matches) > 1:
-            address.street.street_code = row.street_code
-            address.street.shape = row.shape
             address.cl_addr_match = 'MULTI'  # str(len(matches))
             get_address_geom(address, addr_uber=addr_uber, match=row)
+            address.street.street_code = row.street_code
+            address.street.shape = row.shape
             return
 
     if len(address.street.name) > 3 and address.street.name.isalpha():
@@ -778,15 +818,25 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
             return
     #TODO: Add attempts to match on alias street name w/ and w/o suffix as well as fuzzy matching
 
+
 # simple method for adding street_code to street_2
-def get_cl_info_street2(address):
+def get_cl_info_street2(address, addr_uber, centerlines):
     # Get matching centerlines based on street name
-    centerlines = is_cl_base(address.street_2.full)
-    # If there are matches
-    if len(centerlines) > 0:
-        address.street_2.street_code = centerlines[0].street_code
-        address.street_2.shape = centerlines[0].shape
-        if address.street.shape and address.street_2.shape:
-            get_int_geom(address)
+    # TODO filter street 1 & 2 centerlines by street name comps & populate street comps
+    street_2_centerlines = is_cl_base(address.street_2.full)
+    if not street_2_centerlines:
+        street_2_centerlines = is_cl_name(address.street_2.name)
+    # If there are matches, look for intersection; if not, fall back on street match
+    if len(centerlines) > 0 and len(street_2_centerlines) > 0:
+        for centerline in centerlines:
+            int_map_row = int_map[str(centerline.street_code)]
+            for street_2_centerline in street_2_centerlines:
+                for intersection in int_map_row:
+                    if street_2_centerline.street_code in (intersection['street_1_code'], intersection['street_2_code']):
+                        addr_uber.type = AddrType.intersection_addr
+                        assign_cl_info(address, centerline, True)
+                        assign_cl2_info(address, street_2_centerline)
+                        get_int_geom(address)
+                        return
         return
 

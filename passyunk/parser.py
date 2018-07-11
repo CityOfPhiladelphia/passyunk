@@ -20,7 +20,8 @@ import sys
 import warnings
 from copy import deepcopy
 from shapely.geometry import mapping
-from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2, create_al_lookup, get_address_geom
+from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2, create_al_lookup, create_int_lookup, \
+    get_address_geom
 from .data import opa_account_re, zipcode_re, po_box_re, mapreg_re, AddrType, \
     ILLEGAL_CHARS_RE
 from .election import create_election_lookup, get_election_info
@@ -260,7 +261,6 @@ def centerline_rematch(address):
             address.postdir = centerline_name[0].post
             address.parse_method = 'CL_S'
             address.is_centerline_match = True
-
             # street_centerline_lookup, street_centerline_name_lookup,name_lookup,pre_lookup,suffix_lookup
 
 
@@ -339,7 +339,8 @@ def parse(item, MAX_RANGE):
             address_uber.components.output_address = item
             address_uber.type = AddrType.none
 
-    elif ' AND ' in item and item[-8:] != ' A AND B':
+    elif ' AND ' in item and item[-8:] != ' A AND B' and not item[0].isdigit():
+        # if leading digit then don't treat as intersection. TODO: make leading digit test more robust
         tokens = item.split(' AND ')
         if tokens[0][:5] == 'NEAR ':
             tokens[0] = tokens[0][5:]
@@ -351,7 +352,7 @@ def parse(item, MAX_RANGE):
             address2 = Address()
             address2 = parse_addr_1(address2, tokens[1])
             address.street_2 = address2.street
-            address_uber.type = AddrType.intersection_addr
+            get_cl_info(address, address_uber, MAX_RANGE)
 
     elif po_box_search:
         search = po_box_re.search(item)
@@ -360,11 +361,12 @@ def parse(item, MAX_RANGE):
         address.street.name = 'PO BOX {}'.format(num)
 
     else:
-    #     if landmark_addr:
-    #         item = landmark_addr
-        #######################################################################################################################
-
-        address = parse_addr_1(address, item)
+        # Look for 'AND' and filter from left
+        if 'AND' in item:
+            tokens = item.split(' AND ')
+            address = parse_addr_1(address, tokens[0])
+        else:
+            address = parse_addr_1(address, item)
         if address.street.parse_method == 'UNK':
             address_uber.type = AddrType.none
             address_uber.components.output_address = item
@@ -378,12 +380,6 @@ def parse(item, MAX_RANGE):
                 if address.street.name == '':
                     raise ValueError('Parsed address does not have a street name: {}'.format(item))
             elif address_uber.type != AddrType.block:
-                # if the users doesn't have the centerline file, parser will still work
-                # if is_cl_file:
-                #     get_cl_info(address, address_uber, MAX_RANGE)
-                    # if address_uber.type == 'intersection_addr':
-                    #     get_cl_info_street2(address)
-                # address_uber.type = AddrType.street
                 address_uber.type = AddrType.none
 
     name_switch(address)
@@ -406,28 +402,16 @@ def parse(item, MAX_RANGE):
     # if the users doesn't have the centerline file, parser will still work
     if is_cl_file:
         get_cl_info(address, address_uber, MAX_RANGE)
-        if address_uber.components.street.is_centerline_match and address_uber.type == AddrType.none:
-            address_uber.type = AddrType.street
-            get_address_geom(address_uber.components, addr_uber=address_uber)
-        if address_uber.type == 'intersection_addr':
-            get_cl_info_street2(address)
 
-    # check if landmark if address_uber.type = none, street or = intersection_addr with at least one non-matching street
-    if address_uber.type == AddrType.none or (address_uber.type == AddrType.intersection_addr and (
-                    address_uber.components.street.is_centerline_match == False or address_uber.components.street_2.is_centerline_match == False)):
+    # check if landmark if address_uber.type = none or street with a street_2.full value
+    if address_uber.type in (AddrType.none, '') or (address_uber.type == AddrType.street and (
+                    address_uber.components.street_2.full )):
         landmark.landmark_check()
         if landmark.is_landmark:
             item = landmark.landmark_address
             address = parse_addr_1(address, item)
-            # Hack to process address steps below:
             address_uber.type = AddrType.address
             get_cl_info(address, address_uber, MAX_RANGE)
-            if address_uber.components.street.is_centerline_match and address_uber.type == AddrType.none:
-                address_uber.type = AddrType.street
-            if address_uber.type == 'intersection_addr':
-                get_cl_info_street2(address)
-
-            # get_address_geom(address, addr_uber=address_uber, match=address.street)
 
     create_full_names(address, address_uber.type)
     # if the users doesn't have the zip4 file, parser will still work
@@ -451,17 +435,16 @@ def parse(item, MAX_RANGE):
             get_election_info(address_copy)
             address.election.blockid = address_copy.election.blockid
             address.election.precinct = address_copy.election.precinct
-        # if test_cl_file:
-        # get_cl_info(address, address_uber.input_address)
+
     if address_uber.components.address_unit.unit_type == '' and address_uber.components.address_unit.unit_num != '':
         address_uber.components.address_unit.unit_type = '#'
 
     if len(address.mailing.zip4) == 4 and address.mailing.zip4[2:4] == 'ND':
         address.mailing.zip4 = ''
 
-    if address_uber.type == AddrType.intersection and address.base_address.find(' & ') == -1:
+    if address_uber.type == AddrType.intersection_addr and address.base_address.find(' & ') == -1:
         address_uber.type = AddrType.address
-    if address_uber.type == AddrType.intersection:
+    if address_uber.type == AddrType.intersection_addr:
         address_uber.components.output_address = address.base_address
     elif address_uber.type != AddrType.opa_account and \
                     address_uber.type != AddrType.mapreg and \
@@ -487,7 +470,6 @@ def parse(item, MAX_RANGE):
         address_uber.type = AddrType.none
 
     temp_centerline = is_centerline_name(address_uber.components.street_2.full)
-
     if temp_centerline.full != '0':
         address_uber.components.street_2.is_centerline_match = True
 
@@ -681,7 +663,9 @@ if not is_al_file:
 is_election_file = create_election_lookup()
 if not is_election_file:
     warnings.warn('Election file not found.')
-
+is_int_file = create_int_lookup()
+if not is_int_file:
+    warnings.warn('Intersection file not found')
 
 class PassyunkParser:
     def __init__(self, return_dict=True, MAX_RANGE=200):
