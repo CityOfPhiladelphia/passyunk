@@ -296,6 +296,7 @@ def parse(item, MAX_RANGE):
     address_uber = AddressUber()
     address = address_uber.components
     # latlon_search = latlon_re.search(item)
+    item = '' if item == None else item
     is_xy = xy_check(item)
     if not is_xy:
         item = input_cleanup(address_uber, item)
