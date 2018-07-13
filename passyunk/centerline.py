@@ -742,12 +742,30 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                                 matches.append(row)
 
             if len(matches) == 0:
-                address.cl_addr_match = 'NONE'
+                if addr_low_num == -1:
+                    if address.street_2.full:
+                        # Check if valid street_2 and if so then look for intersection
+                        get_cl_info_street2(address, addr_uber, centerlines)
+                    else:
+                        # Treat as a Street Match
+                        addr_uber.type = AddrType.street
+                        address.cl_addr_match = 'MATCH TO STREET (NOT EXACT). ADDR NUMBER NO MATCH'
+                        # print(centerlines)
+                        # assign_cl_info(address, cl, False)
+                        # address.street.street_code = cl.street_code
+                        get_address_geom(address, addr_uber)
+                else:
+                    address.cl_addr_match = 'NONE'
                 return
 
 
             if len(matches) > 1:
                 address.cl_addr_match = 'MULTI2'
+                # TODO: Decide how to handle this
+                # for now choose first match
+                match = matches[0]
+                assign_cl_info(address, match, False)
+                get_address_geom(address, addr_uber=addr_uber, match=match)
                 return
 
             if len(matches) == 1:
