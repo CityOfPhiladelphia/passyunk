@@ -340,7 +340,7 @@ def parse(item, MAX_RANGE):
             address_uber.components.output_address = item
             address_uber.type = AddrType.none
 
-    elif ' AND ' in item and item[-8:] != ' A AND B' and not item[0].isdigit():
+    elif ' AND ' in item and item[-8:] != ' A AND B' and not item.split(' ')[0].isdigit():
         # if leading digit then don't treat as intersection. TODO: make leading digit test more robust
         tokens = item.split(' AND ')
         if tokens[0][:5] == 'NEAR ':
