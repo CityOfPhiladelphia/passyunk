@@ -456,28 +456,31 @@ def project_shape(shape, from_srid, to_srid):
 
 
 def get_street_geom(address):
-    centerlines = is_cl_name(address.street.name)
-    coords = []
-    if address.street.predir:
-        for centerline in centerlines:
-            if centerline.pre == address.street.predir:
-                coords.append(loads(centerline.shape))
-    # No predir
-    else:
-        # Try to match to centerlines with no predir
-        for centerline in centerlines:
-            if centerline.pre == '':
-                coords.append(loads(centerline.shape))
-        # If no matches, use get midpoint of matching named centerlines with any predirs
-        if not coords:
+    try:
+        centerlines = is_cl_name(address.street.name)
+        coords = []
+        if address.street.predir:
             for centerline in centerlines:
-                coords.append(loads(centerline.shape))
-    multilinestring = MultiLineString(coords)
-    xy = multilinestring.centroid
-    snapped = multilinestring.interpolate(multilinestring.project(xy))
-    geom = project_shape(snapped, 2272, 4326)
-    geom = mapping(geom)
-    address.geometry = geom
+                if centerline.pre == address.street.predir:
+                    coords.append(loads(centerline.shape))
+        # No predir
+        else:
+            # Try to match to centerlines with no predir
+            for centerline in centerlines:
+                if centerline.pre == '':
+                    coords.append(loads(centerline.shape))
+            # If no matches, use get midpoint of matching named centerlines with any predirs
+            if not coords:
+                for centerline in centerlines:
+                    coords.append(loads(centerline.shape))
+        multilinestring = MultiLineString(coords)
+        xy = multilinestring.centroid
+        snapped = multilinestring.interpolate(multilinestring.project(xy))
+        geom = project_shape(snapped, 2272, 4326)
+        geom = mapping(geom)
+        address.geometry = geom
+    except:
+        pass
 
 
 def get_midpoint_geom(address, match):
@@ -496,27 +499,31 @@ def get_midpoint_geom(address, match):
     address.geometry = geom
 
 
-def get_full_range_geom(address, match):
+def get_full_range_geom(address, addr_uber, match):
     addr_low_num = address.address.low_num
-    cl_shape = loads(address.street.shape)
-    f_l = match.from_left
-    f_r = match.from_right
-    t_l = match.to_left
-    t_r = match.to_right
-    seg_side = "R" if f_r % 2 == addr_low_num % 2 else "L"
-    # Check if address low num is within centerline seg full address range with parity:
-    from_num, to_num = (f_r, t_r) if seg_side == "R" else (
-    f_l, t_l)
-    side_delta = to_num - from_num
-    if side_delta == 0:
-        distance_ratio = 0.5
-    else:
-        distance_ratio = (addr_low_num - from_num) / side_delta
-    xy = interpolate_line(cl_shape, distance_ratio, full_range_buffer)
-    xy_offset = offset(cl_shape, xy, centerline_offset, seg_side)
-    geom = project_shape(xy_offset, 2272, 4326)
-    geom = mapping(geom)
-    address.geometry = geom
+    try:
+        cl_shape = loads(address.street.shape)
+        f_l = match.from_left
+        f_r = match.from_right
+        t_l = match.to_left
+        t_r = match.to_right
+        seg_side = "R" if f_r % 2 == addr_low_num % 2 else "L"
+        # Check if address low num is within centerline seg full address range with parity:
+        from_num, to_num = (f_r, t_r) if seg_side == "R" else (
+        f_l, t_l)
+        side_delta = to_num - from_num
+        if side_delta == 0:
+            distance_ratio = 0.5
+        else:
+            distance_ratio = (addr_low_num - from_num) / side_delta
+        xy = interpolate_line(cl_shape, distance_ratio, full_range_buffer)
+        xy_offset = offset(cl_shape, xy, centerline_offset, seg_side)
+        geom = project_shape(xy_offset, 2272, 4326)
+        geom = mapping(geom)
+        address.geometry = geom
+    except:
+        print("Could not get geom for: ", addr_uber.input_address)
+        address.geometry = {}
 
 
 def get_int_geom(address):
@@ -535,7 +542,7 @@ def get_address_geom(address, addr_uber=None, match=None):
     if addr_uber.type == AddrType.street:
         get_street_geom(address)
     elif addr_uber.type == AddrType.address:
-        get_full_range_geom(address, match)
+        get_full_range_geom(address, addr_uber, match)
     elif addr_uber.type == AddrType.intersection_addr:
         if address.street.street_code and address.street_2.street_code:
             get_int_geom(address)
@@ -544,7 +551,6 @@ def get_address_geom(address, addr_uber=None, match=None):
     return address.geometry
 
 
-#TODO: add street name components
 def assign_cl_info(address, match, seg_match):
     address.street.street_code = match.street_code
     address.street.shape = match.shape
@@ -726,7 +732,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
             for row in centerlines:
                 if row.from_left <= addr_low_num <= row.to_left and row.oeb_left == addr_parity:
                     if address.street.predir == row.pre or '' in [address.street.predir, row.pre]:
-                        if address.street.postdir == row.post or '' in [address.street.postidr, row.post]:
+                        if address.street.postdir == row.post or '' in [address.street.postdir, row.post]:
                             if (address.street.suffix != '' and address.street.suffix != row.suffix) or '' in [address.street.suffix, row.suffix]:
                                 matches.append(row)
                 elif row.from_right <= addr_low_num <= row.to_right and row.oeb_right == addr_parity:
@@ -791,9 +797,13 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
         # need to resolve dir and/or suffix
         if len(matches) > 1:
             address.cl_addr_match = 'MULTI'  # str(len(matches))
-            get_address_geom(address, addr_uber=addr_uber, match=row)
-            address.street.street_code = row.street_code
-            address.street.shape = row.shape
+            # TODO: Decide how to handle this
+            # for now choose first match
+            match = matches[0]
+            assign_cl_info(address, match, False)
+            get_address_geom(address, addr_uber=addr_uber, match=match)
+            # address.street.street_code = match.street_code
+            # address.street.shape = match.shape
             return
 
     if len(address.street.name) > 3 and address.street.name.isalpha():
@@ -816,7 +826,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
             address.street.score = tie + str(options[0][1])
             get_cl_info(address, addr_uber, MAX_RANGE)
             return
-    #TODO: Add attempts to match on alias street name w/ and w/o suffix as well as fuzzy matching
+        #TODO: Add attempts to match on alias street name w/ and w/o suffix as well as fuzzy matching
 
 
 # simple method for adding street_code to street_2

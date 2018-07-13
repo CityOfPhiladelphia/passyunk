@@ -274,7 +274,6 @@ def xy_check(item):
     tokens = tmp.split(' ')
     if len(tokens) != 2:
         return
-
     try:
         y = float(tokens[0])
     except:
@@ -291,11 +290,13 @@ def xy_check(item):
     else:
         return 'JUNK'
 
+
 def parse(item, MAX_RANGE):
     # address = Addr()
     address_uber = AddressUber()
     address = address_uber.components
     # latlon_search = latlon_re.search(item)
+    item = '' if item is None else item
     is_xy = xy_check(item)
     if not is_xy:
         item = input_cleanup(address_uber, item)
@@ -352,7 +353,7 @@ def parse(item, MAX_RANGE):
             address2 = Address()
             address2 = parse_addr_1(address2, tokens[1])
             address.street_2 = address2.street
-            get_cl_info(address, address_uber, MAX_RANGE)
+            # get_cl_info(address, address_uber, MAX_RANGE)
 
     elif po_box_search:
         search = po_box_re.search(item)
@@ -441,7 +442,6 @@ def parse(item, MAX_RANGE):
 
     if len(address.mailing.zip4) == 4 and address.mailing.zip4[2:4] == 'ND':
         address.mailing.zip4 = ''
-
     if address_uber.type == AddrType.intersection_addr and address.base_address.find(' & ') == -1:
         address_uber.type = AddrType.address
     if address_uber.type == AddrType.intersection_addr:
@@ -458,9 +458,7 @@ def parse(item, MAX_RANGE):
         else:
             address_uber.components.output_address = address.base_address + ' ' + \
                                                      address.address_unit.unit_type + ' '
-
         address_uber.components.output_address = ' '.join(address_uber.components.output_address.split())
-
     temp_centerline = is_centerline_name(address_uber.components.street.full)
 
     if temp_centerline.full != '0':

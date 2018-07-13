@@ -65,6 +65,7 @@ class Landmark:
         results = process.extract(tmp, landmark_list, limit=3)
         results = sorted(results, key=lambda r: r[1], reverse=True)
         try:
+            # Don't return landmark if matches duplicate names
             results = [] if results[0][1] == results[1][1] else results
             lname = results[0][0]
             landmark_attr = landmark_dict[lname]
@@ -76,9 +77,10 @@ class Landmark:
             else:
                 landmark_address = ''
                 landmark_shape = ''
-            self.is_landmark = True if landmark_address or landmark_shape else False
-            self.landmark_address = landmark_address
-            self.landmark_shape = project_shape(loads(landmark_shape), 2272, 4326)
-            self.landmark_name = lname
+            if landmark_address or landmark_shape:
+                self.is_lanmark == True
+                self.landmark_address = landmark_address
+                self.landmark_shape = project_shape(loads(landmark_shape), 2272, 4326)
+                self.landmark_name = lname
         except:
             pass
