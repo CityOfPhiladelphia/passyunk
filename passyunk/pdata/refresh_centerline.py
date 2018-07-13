@@ -6,7 +6,7 @@ import re
 import string
 import petl as etl
 import cx_Oracle
-from config import get_dsn
+from passyunk.config import get_dsn
 from passyunk.namestd import StandardName
 
 dsn = get_dsn('ais_sources')
