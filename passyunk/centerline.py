@@ -857,7 +857,9 @@ def get_cl_info_street2(address, addr_uber, centerlines):
     # If there are matches, look for intersection; if not, fall back on street match
     if len(centerlines) > 0 and len(street_2_centerlines) > 0:
         for centerline in centerlines:
-            int_map_row = int_map[str(centerline.street_code)]
+            int_map_row = int_map.get(str(centerline.street_code))
+            if not int_map_row:
+                continue
             for street_2_centerline in street_2_centerlines:
                 for intersection in int_map_row:
                     if street_2_centerline.street_code in (intersection['street_1_code'], intersection['street_2_code']):
