@@ -483,20 +483,22 @@ def get_street_geom(address):
         pass
 
 
-def get_midpoint_geom(address, match):
-    cl_shape = loads(address.street.shape)
-    xy = cl_shape.centroid
-    addr_low_num = address.address.low_num
-    # apply offset only if there's an addr_low_num
-    if addr_low_num != -1:
-        f_r = match.from_right
-        seg_side = "R" if f_r % 2 == addr_low_num % 2 else "L"
-        xy_offset = offset(cl_shape, xy, centerline_offset, seg_side)
-        geom = project_shape(xy_offset, 2272, 4326)
+def get_block_geom(address, addr_uber, match):
+    centerlines = is_cl_base(address.street.full)
+    coords = []
+    for centerline in centerlines:
+        if 0 <= (centerline.from_left - address.address.low_num) < 100 or 0 <= (centerline.from_right - address.address.low_num) < 100:
+            coords.append(loads(centerline.shape))
+    try:
+        multilinestring = MultiLineString(coords)
+        xy = multilinestring.centroid
+        snapped = multilinestring.interpolate(multilinestring.project(xy))
+        geom = project_shape(snapped, 2272, 4326)
         geom = mapping(geom)
-    else:
-        geom = mapping(xy)
-    address.geometry = geom
+        address.geometry = geom
+    except:
+        print("Could not get geom for: ", addr_uber.input_address)
+        address.geometry = {}
 
 
 def get_full_range_geom(address, addr_uber, match):
@@ -546,6 +548,8 @@ def get_address_geom(address, addr_uber=None, match=None):
     elif addr_uber.type == AddrType.intersection_addr:
         if address.street.street_code and address.street_2.street_code:
             get_int_geom(address)
+    elif addr_uber.type == AddrType.block:
+        get_block_geom(address, addr_uber, match)
     else:
         pass
     return address.geometry
