@@ -2,6 +2,7 @@ import os, sys
 import csv
 import re
 import string
+from copy import deepcopy
 from fuzzywuzzy import process
 from shapely.wkt import loads
 from .namestd import StandardName
@@ -22,7 +23,7 @@ class Landmark:
         return os.path.join(cwd, file_name + '.csv')
 
     def list_landmarks(self, first_letter):
-        path = self.csv_path('landmarks_shape')
+        path = self.csv_path('landmarks')
         landmark_dict = {}
         try:
             with open(path, 'r') as f:
@@ -48,6 +49,7 @@ class Landmark:
         tmp = self.item.strip()
         # Name standardization:
         tmp_list = re.sub('[' + string.punctuation + ']', '', tmp).split()
+        tmp_list_copy = deepcopy(tmp_list)
         std = StandardName(tmp_list, False).output
         # Don't match on 'the' if first word
         try:
@@ -59,11 +61,15 @@ class Landmark:
             first_letter = tmp[0]
         except:
             first_letter = ''
-
         landmark_dict = self.list_landmarks(first_letter)
         landmark_list = [x for x in landmark_dict.keys()]
         results = process.extract(tmp, landmark_list, limit=3)
         results = sorted(results, key=lambda r: r[1], reverse=True)
+        # If no matches above score, try without standardizations
+        if results and results[0][1] <= 89:
+            tmp = ' '.join(tmp_list_copy[1:]) if tmp_list_copy[0].upper() in ('THE', 'TEH') else ' '.join(tmp_list_copy)
+            results = process.extract(tmp, landmark_list, limit=3)
+            results = sorted(results, key=lambda r: r[1], reverse=True)
         try:
             # Don't return landmark if matches duplicate names
             results = [] if results[0][1] == results[1][1] else results
@@ -78,7 +84,7 @@ class Landmark:
                 landmark_address = ''
                 landmark_shape = ''
             if landmark_address or landmark_shape:
-                self.is_lanmark == True
+                self.is_landmark = True
                 self.landmark_address = landmark_address
                 self.landmark_shape = project_shape(loads(landmark_shape), 2272, 4326)
                 self.landmark_name = lname

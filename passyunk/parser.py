@@ -26,7 +26,7 @@ from .data import opa_account_re, zipcode_re, po_box_re, mapreg_re, AddrType, \
     ILLEGAL_CHARS_RE
 from .election import create_election_lookup, get_election_info
 from .parser_addr import parse_addr_1, name_switch, is_centerline_street_name, is_centerline_street_pre, \
-    is_centerline_street_suffix, is_centerline_name, Address
+    is_centerline_street_suffix, is_centerline_name, Address, Street
 from .zip4 import create_zip4_lookup, get_zip_info
 from .landmark import Landmark
 
@@ -403,16 +403,37 @@ def parse(item, MAX_RANGE):
     # if the users doesn't have the centerline file, parser will still work
     if is_cl_file:
         get_cl_info(address, address_uber, MAX_RANGE)
-
     # check if landmark if address_uber.type = none or street with a street_2.full value
     if address_uber.type in (AddrType.none, '') or (address_uber.type == AddrType.street and (
-                    address_uber.components.street_2.full )):
+                    address_uber.components.street_2.full or address_uber.components.street.is_centerline_match == False)):
         landmark.landmark_check()
         if landmark.is_landmark:
-            item = landmark.landmark_address
-            address = parse_addr_1(address, item)
-            address_uber.type = AddrType.address
-            get_cl_info(address, address_uber, MAX_RANGE)
+            if landmark.landmark_address:
+                input_item = item
+                l_address = landmark.landmark_address
+                address_uber = AddressUber()
+                address = address_uber.components
+                item = input_cleanup(address_uber, l_address)
+                address_uber.input_address = input_item
+                if ' AND ' in item:
+                    tokens = item.split(' AND ')
+                    address = parse_addr_1(address, tokens[0])
+                    address2 = Address()
+                    address2 = parse_addr_1(address2, tokens[1])
+                    address.street_2 = address2.street
+                    centerline_rematch(address.street)
+                    centerline_rematch(address.street_2)
+                else:
+                    address = parse_addr_1(address, item)
+                if address_uber.components.cl_seg_id != '':
+                    address_uber.components.street.is_centerline_match = True
+                create_full_names(address, address_uber.type)
+                get_cl_info(address, address_uber, MAX_RANGE)
+            else:
+                # Don't parse landmark name into street comps
+                address_uber.components.street = Street()
+                address_uber.components.street_2 = Street()
+                address_uber.components.cl_addr_match = ''
 
     create_full_names(address, address_uber.type)
     # if the users doesn't have the zip4 file, parser will still work
@@ -460,10 +481,12 @@ def parse(item, MAX_RANGE):
                                                      address.address_unit.unit_type + ' '
         address_uber.components.output_address = ' '.join(address_uber.components.output_address.split())
     temp_centerline = is_centerline_name(address_uber.components.street.full)
-
+    if landmark.is_landmark and not landmark.landmark_address:
+        address_uber.components.output_address = landmark.landmark_name
     if temp_centerline.full != '0':
         address_uber.components.street.is_centerline_match = True
 
+    # If no street code, return none type TODO: handle multi street matches (i.e. BROAD -> N Broad & S Broad) and return with type = street
     if address_uber.type == AddrType.street and address.street.street_code == '':
         address_uber.type = AddrType.none
 
