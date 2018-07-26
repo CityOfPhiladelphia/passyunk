@@ -688,7 +688,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                     get_cl_info_street2(address, addr_uber, centerlines)
                 else:
                     # Treat as a Street Match
-                    addr_uber.type = AddrType.street
+                    # addr_uber.type = AddrType.street
                     address.cl_addr_match = 'MATCH TO STREET. ADDR NUMBER NO MATCH'
                     assign_cl_info(address, cl, False)
                     # address.street.street_code = cl.street_code
