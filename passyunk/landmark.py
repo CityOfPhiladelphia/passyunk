@@ -7,6 +7,7 @@ from fuzzywuzzy import process
 from shapely.wkt import loads
 from .namestd import StandardName
 from .centerline import project_shape
+from .data import INPUT_SRID, OUTPUT_SRID
 
 
 class Landmark:
@@ -45,7 +46,7 @@ class Landmark:
             print('Error opening ' + path, sys.exc_info()[0])
         return landmark_dict
 
-    def landmark_check(self):
+    def landmark_check(self, output_srid=OUTPUT_SRID):
         tmp = self.item.strip()
         # Name standardization:
         tmp_list = re.sub('[' + string.punctuation + ']', '', tmp).split()
@@ -86,7 +87,7 @@ class Landmark:
             if landmark_address or landmark_shape:
                 self.is_landmark = True
                 self.landmark_address = landmark_address
-                self.landmark_shape = project_shape(loads(landmark_shape), 2272, 4326)
+                self.landmark_shape = project_shape(loads(landmark_shape), INPUT_SRID, output_srid)
                 self.landmark_name = lname
         except:
             pass

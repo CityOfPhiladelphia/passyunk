@@ -65,6 +65,7 @@ class Address:
         self.cl_responsibility = ''
         self.cl_addr_match = ''
         self.geometry = {}
+        self.crs = {}
 
     def __str__(self):
         return 'Address: {}'.format(self.output_address)

@@ -92,3 +92,7 @@ AddrType = Enum(['none',  # Any entry not identified below
                  'street',  # MARKET ST
                  'zipcode',
                  'landmark'])  # 19125
+
+MAX_RANGE = 200
+INPUT_SRID = 2272
+OUTPUT_SRID = 4326

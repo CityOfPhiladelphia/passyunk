@@ -8,7 +8,7 @@ from fuzzywuzzy import process
 from shapely.wkt import loads
 from shapely.geometry import mapping, Point, MultiLineString
 from math import sin, cos, atan2, pi
-from .data import AddrType
+from .data import AddrType, INPUT_SRID, OUTPUT_SRID
 
 __author__ = 'tom.swanson'
 
@@ -455,7 +455,7 @@ def project_shape(shape, from_srid, to_srid):
     return transform(project, shape)
 
 
-def get_street_geom(address):
+def get_street_geom(address, output_srid):
     try:
         centerlines = is_cl_name(address.street.name)
         coords = []
@@ -476,14 +476,14 @@ def get_street_geom(address):
         multilinestring = MultiLineString(coords)
         xy = multilinestring.centroid
         snapped = multilinestring.interpolate(multilinestring.project(xy))
-        geom = project_shape(snapped, 2272, 4326)
+        geom = project_shape(snapped, INPUT_SRID, output_srid)
         geom = mapping(geom)
         address.geometry = geom
     except:
         pass
 
 
-def get_block_geom(address, addr_uber, match):
+def get_block_geom(address, addr_uber, match, output_srid):
     centerlines = is_cl_base(address.street.full)
     coords = []
     for centerline in centerlines:
@@ -493,7 +493,7 @@ def get_block_geom(address, addr_uber, match):
         multilinestring = MultiLineString(coords)
         xy = multilinestring.centroid
         snapped = multilinestring.interpolate(multilinestring.project(xy))
-        geom = project_shape(snapped, 2272, 4326)
+        geom = project_shape(snapped, INPUT_SRID, output_srid)
         geom = mapping(geom)
         address.geometry = geom
     except:
@@ -501,7 +501,7 @@ def get_block_geom(address, addr_uber, match):
         address.geometry = {}
 
 
-def get_full_range_geom(address, addr_uber, match):
+def get_full_range_geom(address, addr_uber, match, output_srid):
     addr_low_num = address.address.low_num
     try:
         cl_shape = loads(address.street.shape)
@@ -520,7 +520,7 @@ def get_full_range_geom(address, addr_uber, match):
             distance_ratio = (addr_low_num - from_num) / side_delta
         xy = interpolate_line(cl_shape, distance_ratio, full_range_buffer)
         xy_offset = offset(cl_shape, xy, centerline_offset, seg_side)
-        geom = project_shape(xy_offset, 2272, 4326)
+        geom = project_shape(xy_offset, INPUT_SRID, output_srid)
         geom = mapping(geom)
         address.geometry = geom
     except:
@@ -529,6 +529,7 @@ def get_full_range_geom(address, addr_uber, match):
 
 
 def get_int_geom(address):
+    # TODO: return node_id & handle projections
     street_1_code = min(int(address.street.street_code), int(address.street_2.street_code))
     street_2_code = max(int(address.street.street_code), int(address.street_2.street_code))
     int_map_row = int_map[str(street_1_code)]
@@ -538,18 +539,22 @@ def get_int_geom(address):
             address.geometry = geom
 
 
-def get_address_geom(address, addr_uber=None, match=None):
+def get_address_geom(address, addr_uber=None, match=None, output_srid=OUTPUT_SRID):
+    global OUTPUT_SRID
+    address.crs = {'type': 'link', 'properties': {'type': 'proj4',
+                                                  'href': 'http://spatialreference.org/ref/epsg/{}/proj4/'.format(
+                                                      output_srid)}}
     if not addr_uber.type or addr_uber.type == AddrType.none:
         return
     if addr_uber.type == AddrType.street:
-        get_street_geom(address)
+        get_street_geom(address,output_srid)
     elif addr_uber.type == AddrType.address:
-        get_full_range_geom(address, addr_uber, match)
+        get_full_range_geom(address, addr_uber, match, output_srid)
     elif addr_uber.type == AddrType.intersection_addr:
         if address.street.street_code and address.street_2.street_code:
-            get_int_geom(address)
+            get_int_geom(address, output_srid)
     elif addr_uber.type == AddrType.block:
-        get_block_geom(address, addr_uber, match)
+        get_block_geom(address, addr_uber, match, output_srid)
     else:
         pass
     return address.geometry
@@ -575,7 +580,7 @@ def assign_cl2_info(address, match):
     address.street_2.suffix = match.suffix
 
 
-def get_cl_info(address, addr_uber, MAX_RANGE):
+def get_cl_info(address, addr_uber, MAX_RANGE, OUTPUT_SRID):
     '''
     1. Get list of centerlines with matching full street name (including predir and suffix)
     2. If no matches, try aliases
@@ -658,7 +663,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                         addr_uber.components.street.suffix = al.cl_suffix
                         addr_uber.components.street.postdir = al.cl_post
 
-                        return get_cl_info(address, addr_uber, MAX_RANGE)
+                        return get_cl_info(address, addr_uber, MAX_RANGE, OUTPUT_SRID)
 
             if len(matches) == 0:
             # Didn't find an alias match
@@ -669,7 +674,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                     # address.street.street_code = cur_closest.street_code
                     # address.street.shape = cur_closest.shape
                     assign_cl_info(address, cur_closest, False)
-                    get_address_geom(address, addr_uber)
+                    get_address_geom(address, addr_uber, output_srid=OUTPUT_SRID)
                     if address.street_2.full:
                         # Check if valid street_2 and if so then look for intersection
                         get_cl_info_street2(address, addr_uber, centerlines)
@@ -692,7 +697,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                     address.cl_addr_match = 'MATCH TO STREET. ADDR NUMBER NO MATCH'
                     assign_cl_info(address, cl, False)
                     # address.street.street_code = cl.street_code
-                    get_address_geom(address, addr_uber)
+                    get_address_geom(address, addr_uber, output_srid=OUTPUT_SRID)
                 return
 
         # Exact Match
@@ -700,7 +705,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
             match = matches[0]
             address.cl_addr_match = 'A'
             assign_cl_info(address, match, True)
-            get_address_geom(address, addr_uber=addr_uber, match=match)
+            get_address_geom(address, addr_uber=addr_uber, match=match, output_srid=OUTPUT_SRID)
             return
 
         # Exact Street match, multiple range matches, return the count of matches
@@ -709,7 +714,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
             # address.street.street_code = cl.street_code
             # address.street.shape = cl.shape
             assign_cl_info(address, cl, False)
-            get_address_geom(address, addr_uber=addr_uber, match=cl)
+            get_address_geom(address, addr_uber=addr_uber, match=cl, output_srid=OUTPUT_SRID)
             # address.cl_addr_match = str(len(matches))
             return
     # If we didn't find a match using the street base (e.g. N 10TH ST), try
@@ -757,7 +762,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                         # print(centerlines)
                         # assign_cl_info(address, cl, False)
                         # address.street.street_code = cl.street_code
-                        get_address_geom(address, addr_uber)
+                        get_address_geom(address, addr_uber, output_srid=OUTPUT_SRID)
                 else:
                     address.cl_addr_match = 'NONE'
                 return
@@ -769,7 +774,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                 # for now choose first match
                 match = matches[0]
                 assign_cl_info(address, match, False)
-                get_address_geom(address, addr_uber=addr_uber, match=match)
+                get_address_geom(address, addr_uber=addr_uber, match=match, output_srid=OUTPUT_SRID)
                 return
 
             if len(matches) == 1:
@@ -788,7 +793,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
 
                 address.cl_addr_match = match_type
                 assign_cl_info(address, match, True)
-                address.geometry = get_address_geom(address, addr_uber=addr_uber, match=match)
+                address.geometry = get_address_geom(address, addr_uber=addr_uber, match=match, output_srid=OUTPUT_SRID)
                 return
 
         if len(matches) == 1:
@@ -813,7 +818,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
 
             address.cl_addr_match = match_type
             assign_cl_info(address, match, True)
-            address.geometry = get_address_geom(address, addr_uber=addr_uber, match=match)
+            address.geometry = get_address_geom(address, addr_uber=addr_uber, match=match, output_srid=OUTPUT_SRID)
             return
 
         # need to resolve dir and/or suffix
@@ -823,7 +828,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
             # for now choose first match
             match = matches[0]
             assign_cl_info(address, match, False)
-            get_address_geom(address, addr_uber=addr_uber, match=match)
+            get_address_geom(address, addr_uber=addr_uber, match=match, output_srid=OUTPUT_SRID)
             # address.street.street_code = match.street_code
             # address.street.shape = match.shape
             return
@@ -846,7 +851,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE):
                 tie = 'Y'
             address.street.name = options[0][0]
             address.street.score = tie + str(options[0][1])
-            get_cl_info(address, addr_uber, MAX_RANGE)
+            get_cl_info(address, addr_uber, MAX_RANGE, OUTPUT_SRID)
             return
         #TODO: Add attempts to match on alias street name w/ and w/o suffix as well as fuzzy matching
 

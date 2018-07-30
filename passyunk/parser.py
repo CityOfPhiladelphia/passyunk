@@ -23,7 +23,7 @@ from shapely.geometry import mapping
 from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2, create_al_lookup, create_int_lookup, \
     get_address_geom
 from .data import opa_account_re, zipcode_re, po_box_re, mapreg_re, AddrType, \
-    ILLEGAL_CHARS_RE
+    ILLEGAL_CHARS_RE, MAX_RANGE, INPUT_SRID, OUTPUT_SRID
 from .election import create_election_lookup, get_election_info
 from .parser_addr import parse_addr_1, name_switch, is_centerline_street_name, is_centerline_street_pre, \
     is_centerline_street_suffix, is_centerline_name, Address, Street
@@ -291,7 +291,7 @@ def xy_check(item):
         return 'JUNK'
 
 
-def parse(item, MAX_RANGE):
+def parse(item, MAX_RANGE, OUTPUT_SRID):
     # address = Addr()
     address_uber = AddressUber()
     address = address_uber.components
@@ -402,12 +402,13 @@ def parse(item, MAX_RANGE):
     address_copy = deepcopy(address)
     # if the users doesn't have the centerline file, parser will still work
     if is_cl_file:
-        get_cl_info(address, address_uber, MAX_RANGE)
+        get_cl_info(address, address_uber, MAX_RANGE, OUTPUT_SRID)
     # check if landmark if address_uber.type = none or street with a street_2.full value
     if address_uber.type in (AddrType.none, '') or (address_uber.type == AddrType.street and (
                     address_uber.components.street_2.full or address_uber.components.street.is_centerline_match == False)):
-        landmark.landmark_check()
+        landmark.landmark_check(output_srid=OUTPUT_SRID)
         if landmark.is_landmark:
+            # If landmark is addressed, treat as address/intersection response with landmark type
             if landmark.landmark_address:
                 input_item = item
                 l_address = landmark.landmark_address
@@ -428,9 +429,9 @@ def parse(item, MAX_RANGE):
                 if address_uber.components.cl_seg_id != '':
                     address_uber.components.street.is_centerline_match = True
                 create_full_names(address, address_uber.type)
-                get_cl_info(address, address_uber, MAX_RANGE)
+                get_cl_info(address, address_uber, MAX_RANGE, OUTPUT_SRID)
             else:
-                # Don't parse landmark name into street comps
+                # Unaddressed landmark: don't parse landmark name into street comps
                 address_uber.components.street = Street()
                 address_uber.components.street_2 = Street()
                 address_uber.components.cl_addr_match = ''
@@ -689,15 +690,16 @@ if not is_int_file:
     warnings.warn('Intersection file not found')
 
 class PassyunkParser:
-    def __init__(self, return_dict=True, MAX_RANGE=200):
+    def __init__(self, return_dict=True, MAX_RANGE=200, OUTPUT_SRID=4326):
         self.return_dict = return_dict
         self.MAX_RANGE = MAX_RANGE
+        self.OUTPUT_SRID = OUTPUT_SRID
         self.zip_file_loaded = True if is_zip_file else False
         self.cl_file_loaded =  True if is_cl_file else False
         self.election_file_loaded =  True if is_election_file else False
 
     def parse(self, addr_str):
-        parsed_out = parse(addr_str, self.MAX_RANGE)
+        parsed_out = parse(addr_str, self.MAX_RANGE, self.OUTPUT_SRID)
 
         if self.return_dict:
             # Hack to make nested addrnum a dict as well
