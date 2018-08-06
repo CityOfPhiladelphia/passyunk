@@ -477,7 +477,7 @@ def get_street_geom(address, output_srid):
         multilinestring = MultiLineString(coords)
         xy = multilinestring.centroid
         snapped = multilinestring.interpolate(multilinestring.project(xy))
-        geom = project_shape(snapped, INPUT_SRID, output_srid)
+        geom = project_shape(snapped, INPUT_SRID, output_srid) if INPUT_SRID != output_srid else snapped
         geom = mapping(geom)
         address.geometry = geom
     except:
@@ -494,7 +494,7 @@ def get_block_geom(address, addr_uber, match, output_srid):
         multilinestring = MultiLineString(coords)
         xy = multilinestring.centroid
         snapped = multilinestring.interpolate(multilinestring.project(xy))
-        geom = project_shape(snapped, INPUT_SRID, output_srid)
+        geom = project_shape(snapped, INPUT_SRID, output_srid) if INPUT_SRID != output_srid else snapped
         geom = mapping(geom)
         address.geometry = geom
     except:
@@ -521,7 +521,7 @@ def get_full_range_geom(address, addr_uber, match, output_srid):
             distance_ratio = (addr_low_num - from_num) / side_delta
         xy = interpolate_line(cl_shape, distance_ratio, full_range_buffer)
         xy_offset = offset(cl_shape, xy, centerline_offset, seg_side)
-        geom = project_shape(xy_offset, INPUT_SRID, output_srid)
+        geom = project_shape(xy_offset, INPUT_SRID, output_srid) if INPUT_SRID != output_srid else xy_offset
         geom = mapping(geom)
         address.geometry = geom
     except:
@@ -536,7 +536,7 @@ def get_int_geom(address, output_srid):
     for row in int_map_row:
         if int(row['street_2_code']) == street_2_code:
             geom = loads(row['shape'])
-            geom = project_shape(geom, INPUT_SRID, output_srid)
+            geom = project_shape(geom, INPUT_SRID, output_srid) if INPUT_SRID != output_srid else geom
             geom = mapping(geom)
             address.geometry = geom
             address.node_id = row['node_id']
