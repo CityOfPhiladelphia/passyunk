@@ -9,6 +9,7 @@ from shapely.wkt import loads
 from shapely.geometry import mapping, Point, MultiLineString
 from math import sin, cos, atan2, pi
 from .data import AddrType, INPUT_SRID, OUTPUT_SRID
+from datetime import datetime
 
 __author__ = 'tom.swanson'
 
@@ -498,7 +499,7 @@ def get_block_geom(address, addr_uber, match, output_srid):
         geom = mapping(geom)
         address.geometry = geom
     except:
-        print("Could not get geom for: ", addr_uber.input_address)
+        # print("Could not get geom for: ", addr_uber.input_address)
         address.geometry = {}
 
 
@@ -525,7 +526,7 @@ def get_full_range_geom(address, addr_uber, match, output_srid):
         geom = mapping(geom)
         address.geometry = geom
     except:
-        print("Could not get geom for: ", addr_uber.input_address)
+        # print("Could not get geom for: ", addr_uber.input_address)
         address.geometry = {}
 
 
@@ -597,6 +598,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE, OUTPUT_SRID):
     centerlines = is_cl_base(addr_street_full)
     # If there are matches
     if len(centerlines) > 0:
+        # print(600, addr_uber.input_address)
         matches = []
         cur_closest = None
         cur_closest_offset = None
@@ -621,7 +623,6 @@ def get_cl_info(address, addr_uber, MAX_RANGE, OUTPUT_SRID):
             else:
                 if from_left == 0:
                     continue
-
                 # Loop over addresses in range to find the min
                 if cur_closest is None or \
                     abs(from_left - addr_low_num) < cur_closest_offset:
@@ -643,6 +644,18 @@ def get_cl_info(address, addr_uber, MAX_RANGE, OUTPUT_SRID):
 
         if len(matches) == 0:
             # good street name but no matching address range
+            # if addr_low_num == -1 and cur_closest is not None:
+            if addr_low_num == -1:
+                # Valid street match, not an address
+                addr_uber.type = AddrType.street
+                address.street.is_centerline_match = True
+                assign_cl_info(address, cl, False)
+                get_address_geom(address, addr_uber, output_srid=OUTPUT_SRID)
+                if address.street_2.full:
+                    # Check if valid street_2 and if so then look for intersection
+                    get_cl_info_street2(address, addr_uber, centerlines, OUTPUT_SRID)
+                return
+
             aliases = is_al_base(addr_street_full)
             # Check for alias
             if len(aliases) > 0:
@@ -670,19 +683,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE, OUTPUT_SRID):
 
             if len(matches) == 0:
             # Didn't find an alias match
-                if addr_low_num == -1 and cur_closest is not None:
-                    # Valid street match, not an address
-                    addr_uber.type = AddrType.street
-                    address.street.is_centerline_match = True
-                    # address.street.street_code = cur_closest.street_code
-                    # address.street.shape = cur_closest.shape
-                    assign_cl_info(address, cur_closest, False)
-                    get_address_geom(address, addr_uber, output_srid=OUTPUT_SRID)
-                    if address.street_2.full:
-                        # Check if valid street_2 and if so then look for intersection
-                        get_cl_info_street2(address, addr_uber, centerlines, OUTPUT_SRID)
-                    return
-
+            # Check if cur_closest_offset < MAX_RANGE:
                 if cur_closest_offset is not None and cur_closest_offset < MAX_RANGE:
                     # Out of range address matching a valid street
                     address.cl_addr_match = 'RANGE:' + str(cur_closest_offset)
@@ -691,11 +692,9 @@ def get_cl_info(address, addr_uber, MAX_RANGE, OUTPUT_SRID):
                     # TODO: Return closest address match
                     return
 
-                if address.street_2.full:
-                    # Check if valid street_2 and if so then look for intersection
-                    get_cl_info_street2(address, addr_uber, centerlines, OUTPUT_SRID)
                 else:
-                    # Treat as a Street Match
+                    # cur_closest_offset >= MAX_RANGE:
+                    # Treat as a Street Match (don't?)
                     # addr_uber.type = AddrType.street
                     address.cl_addr_match = 'MATCH TO STREET. ADDR NUMBER NO MATCH'
                     assign_cl_info(address, cl, False)
@@ -726,7 +725,21 @@ def get_cl_info(address, addr_uber, MAX_RANGE, OUTPUT_SRID):
     if len(centerlines) > 0:
         matches = []
         for row in centerlines:
-            if row.from_left <= addr_low_num <= row.to_left and row.oeb_left == addr_parity:
+            # Check if street/intersection search:
+            if addr_low_num == -1:
+                if address.street_2.full:
+                    # Check if valid street_2 and if so then look for intersection
+                    get_cl_info_street2(address, addr_uber, centerlines, OUTPUT_SRID)
+                else:
+                    # Treat as a Street Match
+                    addr_uber.type = AddrType.street
+                    address.cl_addr_match = 'MATCH TO STREET (NOT EXACT). ADDR NUMBER NO MATCH'
+                    assign_cl_info(address, row, False)
+                    address.street.street_code = row.street_code
+                    get_address_geom(address, addr_uber, output_srid=OUTPUT_SRID)
+                return
+
+            elif row.from_left <= addr_low_num <= row.to_left and row.oeb_left == addr_parity:
                 if address.street.predir == row.pre or '' in [address.street.predir, row.pre]:
                     if address.street.postdir == row.post or '' in [address.street.postdir, row.post]:
                         if address.street.suffix == row.suffix or '' in [address.street.suffix, row.suffix]:
@@ -754,22 +767,8 @@ def get_cl_info(address, addr_uber, MAX_RANGE, OUTPUT_SRID):
                                 matches.append(row)
 
             if len(matches) == 0:
-                if addr_low_num == -1:
-                    if address.street_2.full:
-                        # Check if valid street_2 and if so then look for intersection
-                        get_cl_info_street2(address, addr_uber, centerlines, OUTPUT_SRID)
-                    else:
-                        # Treat as a Street Match
-                        addr_uber.type = AddrType.street
-                        address.cl_addr_match = 'MATCH TO STREET (NOT EXACT). ADDR NUMBER NO MATCH'
-                        # print(centerlines)
-                        # assign_cl_info(address, cl, False)
-                        # address.street.street_code = cl.street_code
-                        get_address_geom(address, addr_uber, output_srid=OUTPUT_SRID)
-                else:
-                    address.cl_addr_match = 'NONE'
+                address.cl_addr_match = 'NONE'
                 return
-
 
             if len(matches) > 1:
                 address.cl_addr_match = 'MULTI2'
