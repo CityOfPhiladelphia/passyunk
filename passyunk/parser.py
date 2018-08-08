@@ -28,7 +28,7 @@ from .election import create_election_lookup, get_election_info
 from .parser_addr import parse_addr_1, name_switch, is_centerline_street_name, is_centerline_street_pre, \
     is_centerline_street_suffix, is_centerline_name, Address, Street
 from .zip4 import create_zip4_lookup, get_zip_info
-from .landmark import Landmark
+from .landmark import Landmark, create_landmark_lookup
 
 is_cl_file = False
 is_al_file = False
@@ -439,10 +439,10 @@ def parse(item, MAX_RANGE, OUTPUT_SRID):
     create_full_names(address, address_uber.type)
     # if the users doesn't have the zip4 file, parser will still work
     if is_zip_file:
-        get_zip_info(address, address_uber, MAX_RANGE)
+        get_zip_info(address, address_uber, MAX_RANGE, OUTPUT_SRID)
         # if the address is an alias the zip file may or may not have the alias listed. If not, try the original
         if not address.mailing.zipcode and address != address_copy:
-            get_zip_info(address_copy, address_uber_copy, MAX_RANGE)
+            get_zip_info(address_copy, address_uber_copy, MAX_RANGE, OUTPUT_SRID)
             address.mailing.uspstype = address_copy.mailing.uspstype
             address.mailing.bldgfirm = address_copy.mailing.bldgfirm
             address.mailing.zip4 = address_copy.mailing.zip4
@@ -688,6 +688,9 @@ if not is_election_file:
 is_int_file = create_int_lookup()
 if not is_int_file:
     warnings.warn('Intersection file not found')
+is_landmark_file = create_landmark_lookup()
+if not is_landmark_file:
+    warnings.warn('Landmark file not found')
 
 class PassyunkParser:
     def __init__(self, return_dict=True, MAX_RANGE=200, OUTPUT_SRID=4326):

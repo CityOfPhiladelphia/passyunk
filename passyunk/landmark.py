@@ -6,8 +6,35 @@ from copy import deepcopy
 from fuzzywuzzy import process
 from shapely.wkt import loads
 from .namestd import StandardName
-from .centerline import project_shape
+from .centerline import project_shape, test_file, csv_path
 from .data import INPUT_SRID, OUTPUT_SRID
+
+
+landmark_file = 'landmarks'
+landmark_map = {}
+
+def create_landmark_lookup():
+    is_landmark_file = test_file(landmark_file)
+    if not is_landmark_file:
+        return False
+    path = csv_path(landmark_file)
+    try:
+        with open(path, "r") as f:
+            reader = csv.reader(f)
+            for row in reader:
+                landmark_address = row[1]
+                landmark_shape = row[2]
+                # Don't match on 'the' as first word
+                rlist = row[0].split()
+                rlist = rlist[1:] if rlist[0] == 'THE' else rlist
+                lname = ' '.join(rlist)
+                if not lname in landmark_map:
+                    landmark_map[lname] = []
+                landmark_map[lname].append([landmark_address, landmark_shape])
+
+    except IOError:
+        print('Error opening ' + path, sys.exc_info()[0])
+    return True
 
 
 class Landmark:
@@ -18,33 +45,6 @@ class Landmark:
         self.landmark_shape = ''
         self.is_landmark = False
 
-    def csv_path(self, file_name):
-        cwd = os.path.dirname(__file__)
-        cwd += '/pdata'
-        return os.path.join(cwd, file_name + '.csv')
-
-    def list_landmarks(self, first_letter):
-        path = self.csv_path('landmarks')
-        landmark_dict = {}
-        try:
-            with open(path, 'r') as f:
-                reader = csv.reader(f)
-                for row in reader:
-                    landmark_address = row[1]
-                    landmark_shape = row[2]
-                    # Don't match on 'the' as first word
-                    rlist = row[0].split()
-                    rlist = rlist[1:] if rlist[0] == 'THE' else rlist
-                    lname = ' '.join(rlist)
-                    if lname[0] != first_letter:
-                        continue
-                    if not lname in landmark_dict:
-                        landmark_dict[lname] = []
-                    landmark_dict[lname].append([landmark_address, landmark_shape])
-
-        except IOError:
-            print('Error opening ' + path, sys.exc_info()[0])
-        return landmark_dict
 
     def landmark_check(self, output_srid=OUTPUT_SRID):
         tmp = self.item.strip()
@@ -62,7 +62,7 @@ class Landmark:
             first_letter = tmp[0]
         except:
             first_letter = ''
-        landmark_dict = self.list_landmarks(first_letter)
+        landmark_dict = {k:v for k,v in landmark_map.items() if k[0] == first_letter}
         landmark_list = [x for x in landmark_dict.keys()]
         results = process.extract(tmp, landmark_list, limit=3)
         results = sorted(results, key=lambda r: r[1], reverse=True)
