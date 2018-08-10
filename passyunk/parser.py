@@ -291,7 +291,7 @@ def xy_check(item):
         return 'JUNK'
 
 
-def parse(item, MAX_RANGE, OUTPUT_SRID):
+def parse(item, MAX_RANGE, OUTPUT_SRID, LANDMARK_CENTROID):
     # address = Addr()
     address_uber = AddressUber()
     address = address_uber.components
@@ -406,7 +406,7 @@ def parse(item, MAX_RANGE, OUTPUT_SRID):
     # check if landmark if address_uber.type = none or street with a street_2.full value
     if address_uber.type in (AddrType.none, '') or (address_uber.type == AddrType.street and (
                     address_uber.components.street_2.full or address_uber.components.street.is_centerline_match == False)):
-        landmark.landmark_check(output_srid=OUTPUT_SRID)
+        landmark.landmark_check(output_srid=OUTPUT_SRID, landmark_centroid=LANDMARK_CENTROID)
         if landmark.is_landmark:
             # If landmark is addressed, treat as address/intersection response with landmark type
             if landmark.landmark_address:
@@ -426,6 +426,7 @@ def parse(item, MAX_RANGE, OUTPUT_SRID):
                     centerline_rematch(address.street_2)
                 else:
                     address = parse_addr_1(address, item)
+                    address_uber.type = AddrType.address
                 if address_uber.components.cl_seg_id != '':
                     address_uber.components.street.is_centerline_match = True
                 create_full_names(address, address_uber.type)
@@ -594,7 +595,7 @@ def parse(item, MAX_RANGE, OUTPUT_SRID):
     # Hack to set type back to landmark & assign geometry for non-addressed landmarks
     if landmark.is_landmark:
         address_uber.type = AddrType.landmark
-        address.geometry = mapping(landmark.landmark_shape) if not landmark.landmark_address else address.geometry
+        address.geometry = mapping(landmark.landmark_shape) if (LANDMARK_CENTROID or not landmark.landmark_address) else address.geometry
 
     del address_uber.components.street.shape
     del address_uber.components.street_2.shape
@@ -693,16 +694,17 @@ if not is_landmark_file:
     warnings.warn('Landmark file not found')
 
 class PassyunkParser:
-    def __init__(self, return_dict=True, MAX_RANGE=200, OUTPUT_SRID=4326):
+    def __init__(self, return_dict=True, MAX_RANGE=200, OUTPUT_SRID=4326, LANDMARK_CENTROID=False):
         self.return_dict = return_dict
         self.MAX_RANGE = MAX_RANGE
         self.OUTPUT_SRID = OUTPUT_SRID
+        self.LANDMARK_CENTROID = LANDMARK_CENTROID
         self.zip_file_loaded = True if is_zip_file else False
         self.cl_file_loaded =  True if is_cl_file else False
         self.election_file_loaded =  True if is_election_file else False
 
     def parse(self, addr_str):
-        parsed_out = parse(addr_str, self.MAX_RANGE, self.OUTPUT_SRID)
+        parsed_out = parse(addr_str, self.MAX_RANGE, self.OUTPUT_SRID, self.LANDMARK_CENTROID)
 
         if self.return_dict:
             # Hack to make nested addrnum a dict as well

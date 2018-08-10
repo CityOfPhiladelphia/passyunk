@@ -7,7 +7,7 @@ from fuzzywuzzy import process
 from shapely.wkt import loads
 from .namestd import StandardName
 from .centerline import project_shape, test_file, csv_path
-from .data import INPUT_SRID, OUTPUT_SRID
+from .data import INPUT_SRID, OUTPUT_SRID, LANDMARK_CENTROID
 
 
 landmark_file = 'landmarks'
@@ -46,7 +46,7 @@ class Landmark:
         self.is_landmark = False
 
 
-    def landmark_check(self, output_srid=OUTPUT_SRID):
+    def landmark_check(self, output_srid=OUTPUT_SRID, landmark_centroid=LANDMARK_CENTROID):
         tmp = self.item.strip()
         # Name standardization:
         tmp_list = re.sub('[' + string.punctuation + ']', '', tmp).split()
@@ -88,6 +88,9 @@ class Landmark:
                 self.is_landmark = True
                 self.landmark_address = landmark_address
                 self.landmark_shape = project_shape(loads(landmark_shape), INPUT_SRID, output_srid)
+                if landmark_centroid:
+                    self.landmark_shape = self.landmark_shape.centroid
                 self.landmark_name = lname
         except:
             pass
+

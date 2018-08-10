@@ -96,3 +96,4 @@ AddrType = Enum(['none',  # Any entry not identified below
 MAX_RANGE = 200
 INPUT_SRID = 2272
 OUTPUT_SRID = 4326
+LANDMARK_CENTROID = False
