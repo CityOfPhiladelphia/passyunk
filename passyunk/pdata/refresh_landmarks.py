@@ -23,9 +23,9 @@ def standardize(tmp):
 stmt = '''
 with places as 
 (
-select name, address, shape, globalid from namedplaces_polygons where substr(name,1,1) NOT IN ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9') and public_ = 'Y'
+select name, address, shape, globalid from namedplaces_polygons where substr(name,1,1) NOT IN ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9') and public_ = 'Y' and archive_date is null
 union
-select name, address, shape, globalid from namedplaces_points where substr(name,1,1) NOT IN ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9') and public_ = 'Y'
+select name, address, shape, globalid from namedplaces_points where substr(name,1,1) NOT IN ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9') and public_ = 'Y' and archive_date is null
 )
 ,
 union_alias as
