@@ -23,7 +23,7 @@ from shapely.geometry import mapping
 from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2, create_al_lookup, create_int_lookup, \
     get_address_geom
 from .data import opa_account_re, zipcode_re, po_box_re, mapreg_re, AddrType, \
-    ILLEGAL_CHARS_RE, MAX_RANGE, INPUT_SRID, OUTPUT_SRID
+    ILLEGAL_CHARS_RE, MAX_RANGE, INPUT_SRID, OUTPUT_SRID, LANDMARK_CENTROID
 from .election import create_election_lookup, get_election_info
 from .parser_addr import parse_addr_1, name_switch, is_centerline_street_name, is_centerline_street_pre, \
     is_centerline_street_suffix, is_centerline_name, Address, Street
@@ -291,7 +291,7 @@ def xy_check(item):
         return 'JUNK'
 
 
-def parse(item, MAX_RANGE, OUTPUT_SRID, LANDMARK_CENTROID):
+def parse(item, MAX_RANGE, output_srid=OUTPUT_SRID, max_range=MAX_RANGE, landmark_centroid=LANDMARK_CENTROID):
     # address = Addr()
     address_uber = AddressUber()
     address = address_uber.components
@@ -402,11 +402,11 @@ def parse(item, MAX_RANGE, OUTPUT_SRID, LANDMARK_CENTROID):
     address_copy = deepcopy(address)
     # if the users doesn't have the centerline file, parser will still work
     if is_cl_file:
-        get_cl_info(address, address_uber, MAX_RANGE, OUTPUT_SRID)
+        get_cl_info(address, address_uber, MAX_RANGE, output_srid)
     # check if landmark if address_uber.type = none or street with a street_2.full value
     if address_uber.type in (AddrType.none, '') or (address_uber.type == AddrType.street and (
                     address_uber.components.street_2.full or address_uber.components.street.is_centerline_match == False)):
-        landmark.landmark_check(output_srid=OUTPUT_SRID, landmark_centroid=LANDMARK_CENTROID)
+        landmark.landmark_check(output_srid=output_srid, landmark_centroid=landmark_centroid)
         if landmark.is_landmark:
             # If landmark is addressed, treat as address/intersection response with landmark type
             if landmark.landmark_address:
@@ -430,7 +430,7 @@ def parse(item, MAX_RANGE, OUTPUT_SRID, LANDMARK_CENTROID):
                 if address_uber.components.cl_seg_id != '':
                     address_uber.components.street.is_centerline_match = True
                 create_full_names(address, address_uber.type)
-                get_cl_info(address, address_uber, MAX_RANGE, OUTPUT_SRID)
+                get_cl_info(address, address_uber, MAX_RANGE, output_srid)
             else:
                 # Unaddressed landmark: don't parse landmark name into street comps
                 address_uber.components.street = Street()
@@ -440,10 +440,10 @@ def parse(item, MAX_RANGE, OUTPUT_SRID, LANDMARK_CENTROID):
     create_full_names(address, address_uber.type)
     # if the users doesn't have the zip4 file, parser will still work
     if is_zip_file:
-        get_zip_info(address, address_uber, MAX_RANGE, OUTPUT_SRID)
+        get_zip_info(address, address_uber, MAX_RANGE, output_srid)
         # if the address is an alias the zip file may or may not have the alias listed. If not, try the original
         if not address.mailing.zipcode and address != address_copy:
-            get_zip_info(address_copy, address_uber_copy, MAX_RANGE, OUTPUT_SRID)
+            get_zip_info(address_copy, address_uber_copy, MAX_RANGE, output_srid)
             address.mailing.uspstype = address_copy.mailing.uspstype
             address.mailing.bldgfirm = address_copy.mailing.bldgfirm
             address.mailing.zip4 = address_copy.mailing.zip4
@@ -694,7 +694,7 @@ if not is_landmark_file:
     warnings.warn('Landmark file not found')
 
 class PassyunkParser:
-    def __init__(self, return_dict=True, MAX_RANGE=200, OUTPUT_SRID=4326, LANDMARK_CENTROID=False):
+    def __init__(self, return_dict=True, MAX_RANGE=MAX_RANGE, OUTPUT_SRID=OUTPUT_SRID, LANDMARK_CENTROID=LANDMARK_CENTROID):
         self.return_dict = return_dict
         self.MAX_RANGE = MAX_RANGE
         self.OUTPUT_SRID = OUTPUT_SRID
@@ -703,8 +703,8 @@ class PassyunkParser:
         self.cl_file_loaded =  True if is_cl_file else False
         self.election_file_loaded =  True if is_election_file else False
 
-    def parse(self, addr_str):
-        parsed_out = parse(addr_str, self.MAX_RANGE, self.OUTPUT_SRID, self.LANDMARK_CENTROID)
+    def parse(self, addr_str, output_srid=OUTPUT_SRID, max_range=MAX_RANGE, landmark_centroid=LANDMARK_CENTROID):
+        parsed_out = parse(addr_str, self.MAX_RANGE, output_srid=output_srid, max_range=max_range, landmark_centroid=landmark_centroid)
 
         if self.return_dict:
             # Hack to make nested addrnum a dict as well
