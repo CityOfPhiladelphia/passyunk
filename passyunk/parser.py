@@ -20,10 +20,9 @@ import sys
 import warnings
 from copy import deepcopy
 from shapely.geometry import mapping
-from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2, create_al_lookup, create_int_lookup, \
-    get_address_geom
+from .centerline import create_cl_lookup, get_cl_info, create_al_lookup, create_int_lookup
 from .data import opa_account_re, zipcode_re, po_box_re, mapreg_re, AddrType, \
-    ILLEGAL_CHARS_RE, MAX_RANGE, INPUT_SRID, OUTPUT_SRID, LANDMARK_CENTROID
+    ILLEGAL_CHARS_RE, MAX_RANGE, OUTPUT_SRID, LANDMARK_CENTROID
 from .election import create_election_lookup, get_election_info
 from .parser_addr import parse_addr_1, name_switch, is_centerline_street_name, is_centerline_street_pre, \
     is_centerline_street_suffix, is_centerline_name, Address, Street
