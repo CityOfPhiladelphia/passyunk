@@ -498,6 +498,7 @@ def get_block_geom(address, addr_uber, match, output_srid):
         geom = project_shape(snapped, INPUT_SRID, output_srid) if INPUT_SRID != output_srid else snapped
         geom = mapping(geom)
         address.geometry = geom
+        # print(address.geometry)
     except:
         # print("Could not get geom for: ", addr_uber.input_address)
         address.geometry = {}
@@ -596,6 +597,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE, OUTPUT_SRID):
     addr_street_full = address.street.full
     # Get matching centerlines based on street name
     centerlines = is_cl_base(addr_street_full)
+    # print(addr_street_full)
     # If there are matches
     if len(centerlines) > 0:
         # print(600, addr_uber.input_address)
@@ -605,6 +607,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE, OUTPUT_SRID):
         cur_closest_addr = 0
 
         # Loop over matches
+        # print(sorted(list(set([row.base for row in centerlines]))))
         for cl in centerlines:
             from_left = cl.from_left
             from_right = cl.from_right
@@ -686,6 +689,8 @@ def get_cl_info(address, addr_uber, MAX_RANGE, OUTPUT_SRID):
             # Check if cur_closest_offset < MAX_RANGE:
                 if cur_closest_offset is not None and cur_closest_offset < MAX_RANGE:
                     # Out of range address matching a valid street
+                    # print(689)
+                    address.street_name_matches = sorted(list(set([row.base for row in centerlines])))
                     address.cl_addr_match = 'RANGE:' + str(cur_closest_offset)
                     address.address.full = str(cur_closest_addr)
                     assign_cl_info(address, cur_closest, True)
@@ -712,6 +717,8 @@ def get_cl_info(address, addr_uber, MAX_RANGE, OUTPUT_SRID):
 
         # Exact Street match, multiple range matches, return the count of matches
         if len(matches) > 1:
+            # print(715, vars(matches))
+            # address.seg_ids = []
             address.cl_addr_match = 'AM'
             # address.street.street_code = cl.street_code
             # address.street.shape = cl.shape
@@ -732,6 +739,7 @@ def get_cl_info(address, addr_uber, MAX_RANGE, OUTPUT_SRID):
                     get_cl_info_street2(address, addr_uber, centerlines, OUTPUT_SRID)
                 else:
                     # Treat as a Street Match
+                    address.street_name_matches = sorted(list(set([row.base for row in centerlines])))
                     addr_uber.type = AddrType.street
                     address.cl_addr_match = 'MATCH TO STREET (NOT EXACT). ADDR NUMBER NO MATCH'
                     assign_cl_info(address, row, False)
@@ -771,6 +779,8 @@ def get_cl_info(address, addr_uber, MAX_RANGE, OUTPUT_SRID):
                 return
 
             if len(matches) > 1:
+                # print(774, vars(matches))
+                # address.seg_ids = []
                 address.cl_addr_match = 'MULTI2'
                 # TODO: Decide how to handle this
                 # for now choose first match
@@ -825,6 +835,8 @@ def get_cl_info(address, addr_uber, MAX_RANGE, OUTPUT_SRID):
 
         # need to resolve dir and/or suffix
         if len(matches) > 1:
+            # print(830, vars(matches))
+            # address.seg_ids = []
             address.cl_addr_match = 'MULTI'  # str(len(matches))
             # TODO: Decide how to handle this
             # for now choose first match

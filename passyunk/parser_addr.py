@@ -66,7 +66,8 @@ class Address:
         self.cl_addr_match = ''
         self.geometry = {}
         self.crs = {},
-        self.node_id = ''
+        self.node_id = '',
+        self.street_name_matches = []
 
     def __str__(self):
         return 'Address: {}'.format(self.output_address)
