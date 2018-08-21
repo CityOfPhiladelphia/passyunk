@@ -35,7 +35,7 @@ def standardize_name(name):
 
 centerline_stmt = '''select trim(PRE_DIR) AS PRE_DIR,trim(ST_NAME) AS ST_NAME,trim(ST_TYPE) AS ST_TYPE,trim(SUF_DIR) AS SUF_DIR,
             L_F_ADD,L_T_ADD,R_F_ADD,R_T_ADD,ST_CODE,SEG_ID,trim(RESPONSIBL) AS RESPONSIBL from {} 
-           order by st_name, pre_dir, st_type, suf_dir, l_f_add, l_t_add, r_f_add, r_t_add, st_code, seg_id'''.format(street_centerline_table_name)
+           order by st_name, st_type, pre_dir, suf_dir, l_f_add, l_t_add, r_f_add, r_t_add, st_code, seg_id'''.format(street_centerline_table_name)
 
 centerline_rows = etl.fromdb(dbo, centerline_stmt).convert('ST_NAME', lambda s: standardize_name(s))
 
@@ -48,7 +48,7 @@ centerline_street_rows = centerline_rows.cut('PRE_DIR', 'ST_NAME', 'ST_TYPE') \
     .addfield('POST_DIR', '') \
     .cut('STREET_FULL', 'PRE_DIR', 'ST_NAME', 'ST_TYPE', 'POST_DIR') \
     .distinct() \
-    .sort(key=['ST_NAME', 'PRE_DIR', 'ST_TYPE', 'POST_DIR'])
+    .sort(key=['ST_NAME', 'ST_TYPE', 'PRE_DIR', 'POST_DIR'])
 
 print(etl.look(centerline_street_rows))
 centerline_street_rows.tocsv(centerline_streets_csv, write_header=False)
