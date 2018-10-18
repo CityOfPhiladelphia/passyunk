@@ -8,7 +8,7 @@ import boto3
 from passyunk.parser import PassyunkParser
 from config import get_dsn, get_bucket
 
-month = '2018_05'
+month = '2018_09'
 parser = PassyunkParser()
 
 # Input locations
@@ -24,9 +24,9 @@ zip4_write_table_name = 'USPS_ZIP4S'
 cityzip_write_table_name = 'USPS_CITYZIP'
 alias_write_table_name = 'USPS_ALIAS'
 address_standardization_report_table_name = 'USPS_ZIP4_ADDRESS_CHECK'
-alias_outfile_path = alias_write_table_name + '.csv'
-cityzip_outfile_path = cityzip_write_table_name + '.csv'
-zip4_outfile_path = zip4_write_table_name + '.csv'
+alias_outfile_path = alias_write_table_name.lower() + '.csv'
+cityzip_outfile_path = cityzip_write_table_name.lower() + '.csv'
+zip4_outfile_path = zip4_write_table_name.lower() + '.csv'
 temp_zip4_outfile_path = 'T_' + zip4_outfile_path
 #####################################
 # Meta:
