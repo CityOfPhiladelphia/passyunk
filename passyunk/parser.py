@@ -157,7 +157,6 @@ def create_full_names(address, addr_type):
 
     temp = '%s %s %s %s' % (address.street.predir, address.street.name, address.street.suffix, address.street.postdir)
     address.street.full = ' '.join(temp.split())
-
     temp = '%s %s %s %s' % (
         address.street_2.predir, address.street_2.name, address.street_2.suffix, address.street_2.postdir)
     address.street_2.full = ' '.join(temp.split())
@@ -387,7 +386,12 @@ def parse(item, MAX_RANGE):
                 # address_uber.type = AddrType.street
                 address_uber.type = AddrType.none
 
-    name_switch(address)
+    if address.street.parse_method != 'cl_name_match':
+        name_switch(address)
+
+    if address_uber.type == AddrType.none and address.street.parse_method == 'cl_name_match':
+        address_uber.type = AddrType.street
+        address_uber.components.street.is_centerline_match = True
 
     if address_uber.type == AddrType.address and not address_uber.components.street.is_centerline_match:
         centerline_rematch(address.street)

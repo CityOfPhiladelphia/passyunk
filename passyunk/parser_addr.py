@@ -1417,29 +1417,41 @@ def parse_addr_1(address, item):
         return address
 
     # This is just for speed, check for clean address match, handle, and return
-    if len(tokens) > 1 and tokens[0].isdigit():
-        centerline_name = is_centerline_name(' '.join(tokens[1:]))
-        #        centerline_street_name = is_centerline_street_name(' '.join(tokens[1:2]))
-        if centerline_name.full != '0':
-            address.street.predir = centerline_name.pre
-            address.street.name = centerline_name.name
-            address.street.suffix = centerline_name.suffix
-            address.street.postdir = centerline_name.post
+    if len(tokens) > 1:
+        if tokens[0].isdigit():
+            centerline_name = is_centerline_name(' '.join(tokens[1:]))
+            #        centerline_street_name = is_centerline_street_name(' '.join(tokens[1:2]))
+            if centerline_name.full != '0':
+                address.street.predir = centerline_name.pre
+                address.street.name = centerline_name.name
+                address.street.suffix = centerline_name.suffix
+                address.street.postdir = centerline_name.post
 
-            address.address.addrnum_type = 'N'
-            address.address.low_num = int(tokens[0])
+                address.address.addrnum_type = 'N'
+                address.address.low_num = int(tokens[0])
 
-            if address.address.low_num % 2 == 0:
-                address.address.parity = 'E'
-            else:
-                address.address.parity = 'O'
+                if address.address.low_num % 2 == 0:
+                    address.address.parity = 'E'
+                else:
+                    address.address.parity = 'O'
 
-            # address.address.high_num = int(tokens[0])
-            address.address.low = str(int(tokens[0]))
-            # address.address.high = str(int(tokens[0]))
-            address.address.isaddr = True
-            address.street.parse_method = 'CL1'
-            return address
+                # address.address.high_num = int(tokens[0])
+                address.address.low = str(int(tokens[0]))
+                # address.address.high = str(int(tokens[0]))
+                address.address.isaddr = True
+                address.street.parse_method = 'CL1'
+                return address
+        else:
+            # check for clean street match, handle and return
+            is_cl_name = is_centerline_name(item)
+            if is_cl_name.full == item:
+                address.street.predir = is_cl_name.pre
+                address.street.name = is_cl_name.name
+                address.street.suffix = is_cl_name.suffix
+                address.street.postdir = is_cl_name.post
+                address.street.full = is_cl_name.full
+                address.street.parse_method = 'cl_name_match'
+                return address
 
     # total hack but 'K' will be recognized as an apt otherwise when there is no suffix
     if item.find('J F K') >= 0 or item.find('JF K') >= 0 or item.find('M L K') >= 0 or item.find('N3RD') >= 0:
