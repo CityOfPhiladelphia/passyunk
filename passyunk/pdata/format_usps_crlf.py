@@ -8,7 +8,7 @@ import boto3
 from passyunk.parser import PassyunkParser
 from config import get_dsn, get_bucket
 
-month = '2018_09'
+month = '2020_03'
 parser = PassyunkParser()
 
 # Input locations
