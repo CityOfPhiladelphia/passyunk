@@ -1,0 +1,13 @@
+boto3==1.24.79
+botocore==1.27.79
+cx-Oracle==8.3.0
+fuzzywuzzy==0.18.0
+jmespath==1.0.1
+numpy==1.21.6
+pandas==1.4.3
+passyunk @ git+https://github.com/CityOfPhiladelphia/passyunk@5cf0ec1a6f150792a524f96c266248e5e24cd547
+petl==1.7.11
+python-dateutil==2.8.2
+s3transfer==0.6.0
+six==1.16.0
+urllib3==1.26.12

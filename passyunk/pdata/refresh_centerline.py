@@ -1,17 +1,17 @@
 '''
-This refreshes the centerline.csv and centerline_streets.csv from scratch with alias'.
+This refreshes the centerline.csv and centerline_streets.csv from scratch (no alias).
 Author: Alex Waldman
+Revisions: James Midkiff
 '''
 import re
 import string
 import petl as etl
-import cx_Oracle
-from config import get_dsn
+import utils as util
+import oracle_code
 from passyunk.namestd import StandardName
 
-dsn = get_dsn('ais_sources')
-dbo = cx_Oracle.connect(dsn)
-alias_table_name = 'alias_list_ais'
+db_creds = util.get_creds("/scripts/passyunk_automation/passyunk/pdata/oracle.json", ['GIS_STREETS'])
+dbo = oracle_code.connect_to_db(db_creds) 
 street_centerline_table_name = 'gis_streets.street_centerline'
 centerline_csv = 'centerline.csv'
 centerline_streets_csv = 'centerline_streets.csv'
@@ -33,10 +33,14 @@ def standardize_name(name):
     std_name = ' '.join(std)
     return std_name
 
-
-centerline_stmt = '''select trim(PRE_DIR) AS PRE_DIR,trim(ST_NAME) AS ST_NAME,trim(ST_TYPE) AS ST_TYPE,trim(SUF_DIR) AS POST_DIR,
-            L_F_ADD,L_T_ADD,R_F_ADD,R_T_ADD,ST_CODE,SEG_ID,trim(RESPONSIBL) AS RESPONSIBL from {} 
-           order by st_name, st_type, pre_dir, suf_dir, l_f_add, l_t_add, r_f_add, r_t_add, st_code, seg_id'''.format(street_centerline_table_name)
+centerline_stmt = f'''
+select trim(PRE_DIR) AS PRE_DIR, trim(ST_NAME) AS ST_NAME, trim(ST_TYPE) AS ST_TYPE, 
+    trim(SUF_DIR) AS POST_DIR, L_F_ADD, L_T_ADD, R_F_ADD, R_T_ADD, ST_CODE, SEG_ID, 
+    trim(RESPONSIBL) AS RESPONSIBL 
+from {street_centerline_table_name} 
+order by st_name, st_type, pre_dir, suf_dir, l_f_add, l_t_add, r_f_add, r_t_add, 
+    st_code, seg_id
+'''
 
 centerline_rows = etl.fromdb(dbo, centerline_stmt).convert('ST_NAME', lambda s: standardize_name(s))
 
