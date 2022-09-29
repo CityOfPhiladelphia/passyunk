@@ -6,6 +6,6 @@ cd /scripts/passyunk/passyunk/pdata
 source venv/bin/activate
 python refresh_centerline.py 
 python format_usps_crlf.py 
-git commit -m "Updated centerline and zip" --author="CityGeo_Auto <maps@phila.gov>"
+git commit -m "Updated centerline and zip" --author="CityGeo_Auto <maps@phila.gov>" # Note that the repository also hase the same author and email
 
 deactivate
