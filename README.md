@@ -86,3 +86,9 @@ Takes an address, standardizes it, and returns a dictionary of address component
       "input_address": "1234 market street",
       "type": "address"
     }
+
+## Data Automation
+There are two scripts to update the data used in passyunk and which are automatically scheduled. They all reside within `passyunk/pdata` and are committed to the GitHub repo on a regular basis: 
+* `refresh_centerline.py` updates 
+    * `centerline.csv`
+    * `centerline_streets`csv
