@@ -6,7 +6,8 @@ fuzzywuzzy==0.18.0
 jmespath==1.0.1
 numpy==1.21.6
 pandas==1.4.3
-passyunk @ git+https://github.com/CityOfPhiladelphia/passyunk@5cf0ec1a6f150792a524f96c266248e5e24cd547
+# Run pip install -e git+https://github.com/CityOfPhiladelphia/passyunk@5cf0ec1a6f150792a524f96c266248e5e24cd547#egg=passyunk
+# to get passyunk in editable form
 petl==1.7.11
 python-dateutil==2.8.2
 s3transfer==0.6.0
