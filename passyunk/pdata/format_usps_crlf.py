@@ -5,8 +5,13 @@ from collections import OrderedDict
 import petl as etl
 import cx_Oracle
 import boto3
+import io
+import zipfile
 from passyunk.parser import PassyunkParser
 from config import get_dsn, get_bucket
+
+zf = zipfile.ZipFile(io.BytesIO(r), "r")
+
 
 month = '2020_03'
 parser = PassyunkParser()

@@ -62,3 +62,7 @@ venv/
 sandbox/
 .vscode
 github_key*
+Notes.md
+*.doc
+*.docx
+*.zip

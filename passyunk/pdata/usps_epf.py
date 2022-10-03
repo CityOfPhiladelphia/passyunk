@@ -3,41 +3,57 @@ import json
 import click
 
 class Usps_Epf(): 
-
+    '''
+    A class for interfacing with the USPS EPF API. See the README of this module for 
+    a detailed understanding of how it works. 
+    '''
     # The URLs are occasionally subject to change, so update them if needed. 
     # It is unclear why USPS EPF has multiple working URLs, hence the list structure.
     urls = {
         'version': {
             'method': 'GET', 
+            'return_type': 'json', 
             'urls': ['https://epfup.usps.gov/up/epfupld//epf/version', 'https://epfws.usps.gov/ws/resources//epf/version']}, 
         'login': {
             'method': 'POST', 
+            'return_type': 'json', 
             'urls': ['https://epfup.usps.gov/up/epfupld//epf/login', 'https://epfws.usps.gov/ws/resources//epf/login']}, 
         'logout': {
             'method': 'POST', 
+            'return_type': 'json', 
             'urls': ['https://epfup.usps.gov/up/epfupld//epf/logout', 'https://epfws.usps.gov/ws/resources//epf/logout']}, 
         'status': {
             'method': 'POST', 
+            'return_type': 'json', 
             'urls': ['https://epfup.usps.gov/up/epfupld//download/status', 'https://epfws.usps.gov/ws/resources//download/status']}, 
         'acslist': {
             'method': 'POST', 
+            'return_type': 'json', 
             'urls': ['https://epfup.usps.gov/up/epfupld//download/acslist', 'https://epfws.usps.gov/ws/resources//download/acslist']}, 
         'dnldlist': {
             'method': 'POST', 
+            'return_type': 'json', 
             'urls': ['https://epfup.usps.gov/up/epfupld//download/dnldlist', 'https://epfws.usps.gov/ws/resources//download/dnldlist']}, 
         'list': {
             'method': 'POST', 
+            'return_type': 'json', 
             'urls': ['https://epfup.usps.gov/up/epfupld//download/list', 'https://epfws.usps.gov/ws/resources//download/list']}, 
         'listplus': {
             'method': 'POST', 
+            'return_type': 'json', 
             'urls': ['https://epfup.usps.gov/up/epfupld//download/listplus', 'https://epfws.usps.gov/ws/resources//download/listplus']}, 
         'epf': {
             'method': 'POST', 
+            'return_type': 'file', # This is the only method diverted by _read_json()
             'urls': ['https://epfup.usps.gov/up/epfupld//download/epf', 'https://epfws.usps.gov/ws/resources//download/epf']}
         }
     valid_statuses = ('N', 'S', 'X', 'C')
     max_depth = 1
+
     def __init__(self, username, password): 
+        '''
+        Entry point for class, requires a valid username and password to be passed
+        '''
         self._username = username
         self._password = password
         self.logonkey = None
@@ -45,17 +61,45 @@ class Usps_Epf():
         self.login()
 
     def _get(self, url): 
+        '''
+        For endpoints that use the HTTP GET method
+        '''
         return requests.get(url)
     
     def _post(self, url, data): 
+        '''
+        For endpoints that use the HTTP post method
+        '''
         return requests.post(url, data)
     
+    def _read_json(self, key, json_str, depth, r: requests.models.Response): 
+        if Usps_Epf.urls[key]['return_type'] == 'json': 
+            r_json = r.json()
+            if r_json['response'] == 'success': 
+                return r_json
+            elif r_json['messages'] == 'Security token failed.': # Need to refresh security token, try again up to max_depth retries
+                depth += 1
+                print(f'Attempting retry {depth}')
+                if depth > Usps_Epf.max_depth: 
+                    return None
+                self.login()
+                json_str = self._reprep_json(json_str)
+                return self._try(key, json_str, depth)
+            else: # Ok HTTP status, but the API said there was a failure
+                print(f'URL: {r.url}\nStatus Code: {r.status_code}\nReason: {r.reason}')
+                print(f'Request parameters: {json_str}')
+                print(f'Response: {r.json()}\n')
+                return None
+        else: 
+            return r
+        
     def _try(self, key, json_str=None, depth=0): 
         '''
         Try each of the urls for the given key in order, and only fail if all of them fail
         '''
         method = Usps_Epf.urls[key]['method']
         for url in Usps_Epf.urls[key]['urls']: 
+            print(f'Trying {url = }, attempt {depth}')
             try: 
                 match method: 
                     case 'GET': 
@@ -71,40 +115,35 @@ class Usps_Epf():
             if not r.ok: # Bad HTTP status, but try again with the remaining urls for that key
                 print(f'URL: {url}\nStatus Code: {r.status_code}\nReason: {r.reason}')
                 print(f'Request parameters: {json_str}')
-            try: 
-                r_j = r.json()
-                if r_j['response'] == 'success': 
-                    return r
-                elif r_j['messages'] == 'Security token failed.': # Need to refresh security token, try again up to max_depth retries
-                    depth += 1
-                    print(f'Attempting retry {depth}')
-                    if depth > Usps_Epf.max_depth: 
-                        break
-                    self.login()
-                    json_str = self._reprep_json(json_str)
-                    return self._try(key, json_str, depth)
-                else: # Ok HTTP status, but the API said there was a failure
-                    print(f'URL: {url}\nStatus Code: {r.status_code}\nReason: {r.reason}')
-                    print(f'Response: {r.json()}\n')
-                    continue
-            except (KeyError, json.JSONDecodeError) as e: # Response is not part of the json for the key "epf", because the file is being downloaded
-                continue
-        print('You may have provided incorrect information such as the ID\n')
-        raise Exception(f'All attempts to use "{method}" for "{key}" failed.') # If all urls for a key fail, then raise Exception
+            rv = self._read_json(key, json_str, depth, r)
+            if rv != None: 
+                return rv
+        print('You may have provided incorrect information\n')
+        raise Exception(f'\nAll attempts to use "{key}" failed.') # If all urls for a key fail, then raise Exception
 
-    def _refresh_security(self, response): 
+    def _refresh_security(self, response, header:bool=False): 
         '''
-        Every call to the API must subsequently refresh the security logonkey and tokenkey
+        Every call to the API must subsequently refresh the security logonkey and 
+        tokenkey, otherwise future calls will fail.
         '''
-        r_json = response.json()
-        self.logonkey = r_json['logonkey']
-        self.tokenkey = r_json['tokenkey']
+        if header: 
+            self.logonkey = response['User-Logonkey']
+            self.tokenkey = response['User-Tokenkey']
+        else: 
+            self.logonkey = response['logonkey']
+            self.tokenkey = response['tokenkey']
+        print('    Successsfully refreshed Logon Key and Token Key')
     
     def _reprep_json(self, json_str): 
         d = json.loads(json_str)
         return self._prep_data(**d)
 
     def _prep_data(self, **kwargs): 
+        '''
+        Prepare the data that must be sent alongside a POST request. This must 
+        always include the LogonKey and TokenKey, and may require other arguments 
+        (**kwargs) depending upon the endpoint
+        '''
         d = {'logonkey': self.logonkey, 'tokenkey': self.tokenkey}
         for key, value in kwargs.items(): 
             if d.get(key) == None: # Don't overwrite the auto-update to the logonkey and tokenkey
@@ -112,65 +151,106 @@ class Usps_Epf():
         return json.dumps(d)
 
     def version(self): 
-        print(self._try('version').json())
+        '''
+        Get the USPS EPF API software version - used to test functionality
+        '''
+        print(self._try('version'))
         
     def login(self): 
+        '''
+        Login to the using the Class username and password. Logging in must be the first 
+        step of the module, and logging out should be the last step.
+        '''
+        print('... Logging in ...')
         json_str = json.dumps({'login': self._username, 'pword':self._password})
-        r = self._try('login', json_str)
-        self._refresh_security(r)
-        print('Successfully received logonkey and tokenkey')
+        r_json = self._try('login', json_str)
+        self._refresh_security(r_json)
 
     def logout(self): 
+        '''
+        Logging out should be the last step of the module, and will deactivate the 
+        currently associated LogonKey and TokenKey
+        '''
         json_str = self._prep_data()
         self._try('logout', json_str)
         print('Successfully logged out and deactivated keys')
     
     def get_list(self): 
+        '''
+        Return a list of files available to download
+        '''
+        print('Retrieving list of downloads')
         json_str = self._prep_data()
-        r = self._try('dnldlist', json_str)
-        self._refresh_security(r)
-        return r.json()['dnldfileList']
+        r_json = self._try('dnldlist', json_str)
+        self._refresh_security(r_json)
+        return r_json['dnldfileList']
         
-    def set_status(self, newstatus: str, fileid: int|str): 
+    def set_status(self, fileid: int|str, newstatus: str): 
+        '''
+        Set the status of a file on the USPS EPS API. NewStatus should be one of: 
+            - "N" = new file available
+            - "S" = download started
+            - "X" = download canceled
+            - "C" = download completed successfully            
+        '''
+        if type(fileid) not in (str, int): 
+            raise TypeError(f'FileID must be of type "str" or "int" convertible to "str" not "{type(fileid)}"')
+        else: 
+            fileid = str(fileid)
         if type(newstatus) != str: 
             raise TypeError(f'New Status must be of type "str" not "{type(newstatus)}"')
         else: 
             newstatus = newstatus.upper()
             if newstatus not in Usps_Epf.valid_statuses: 
                 raise ValueError(f'New Status "{newstatus}" not one of {Usps_Epf.valid_statuses}')
-        if type(fileid) not in (str, int): 
-            raise TypeError(f'FileID must be of type "str" or "int" convertible to "str" not "{type(fileid)}"')
-        else: 
-            fileid = str(fileid)
         json_str = self._prep_data(**{'newstatus':newstatus, 'fileid':fileid})
-        r = self._try('status', json_str)
-        self._refresh_security(r)
+        r_json = self._try('status', json_str)
         print(f'Successfuly set fileid "{fileid}" status to "{newstatus}"')
+        self._refresh_security(r_json)
 
     def get_file(self, fileid): 
+        '''
+        Get a file associated with a particular FileID and return it as bytes. 
+        If successful, update the file's status to "C", otherwise leave its status 
+        as "S". 
+        '''
+        print(f'Attempting to get File ID "{fileid}" ...')
+        self.set_status(fileid, "S")
+
         json_str = self._prep_data(**{'fileid': fileid})
-        print(f'... attempting to get File ID "{fileid}" ...')
         r = self._try('epf', json_str)
-        print(r)
+        
+        self.set_status(fileid, "C")
+        return r.content
 
-
-    def get_new(self): 
+    def get_newest(self): 
+        '''
+        Iterate through the list of available files and get the first file that has 
+        a status of "N" (new, not yet downloaded) and exit. '''
         get_list = self.get_list()
-        for fileid in get_list: 
-            self.set_status("S", fileid)
-            self.get_file(self)
-            self.set_status("C", fileid)
-
-        pass
+        for file in get_list: 
+            if file['status'] == 'N': 
+                fileid = file['fileid']
+                r_content = self.get_file(fileid)
+                return r_content
 
 @click.command()
-@click.option('--url', '-u')
+@click.option('--username', '-u')
 @click.option('--password', '-p')
-def main(url, password): 
-    epf = Usps_Epf(url, password)
-    epf.get_file('7170903')
+def main(username, password): 
+    epf = Usps_Epf(username, password)
+    # Test Case: Bad url or password - PASSED
+    print(epf.get_list())
+    # Test Case: Bad fileid
+    epf.set_status('BAD', 'x')
+    # Test Case: Bad status
+    # Test Case: 
+
+    # print(epf.get_list())
+    # epf.set_status('7108662', 'N')
+    # # r = epf.get_file('7108662') # 7108662 or 7170903
+    # r_content = epf.get_newest()
+    # return r_content
 
 if __name__ == '__main__': 
     main()
-
-    
