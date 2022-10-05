@@ -91,7 +91,6 @@ class Usps_Epf():
             if r_json['response'] == 'success': 
                 return r_json
             elif r_json['response'] == 'failed': # Refresh security token, try again up to max_depth retries
-                # print(f'    URL: {r.url}\nStatus Code: {r.status_code}\nReason: {r.reason}')
                 print(f'    Request parameters: {json_str}')
                 print(f'    Response: {r.json()}\n')
                 depth += 1
