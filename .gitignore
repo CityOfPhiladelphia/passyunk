@@ -63,7 +63,7 @@ sandbox/
 .vscode
 github_key*
 Notes.md
-# *.doc
+*.doc
 *.docx
 *.zip
 *.tar

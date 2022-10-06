@@ -3,11 +3,12 @@ import csv
 import os
 import sys
 import petl as etl
-import cx_Oracle
 import boto3
 import zipfile
 import tarfile
 import click
+# CityGeo:
+import oracle_code
 import usps_epf
 import utils as util
 import config as conf
@@ -35,12 +36,23 @@ def extract_files(creds: dict):
     with zipfile.ZipFile(conf.ZIP4 + '.zip', 'r') as zip: 
         zip.extractall(path=conf.ZIP4, pwd=folder_password)
 
-def write_csv(filename, fieldnames, data): 
+def write_csv(filename: str, fieldnames: str, data: list): 
     with open(filename, 'w', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         for row in data:
             writer.writerow(row)
+
+def todb_loop(all_data, db_conn, tablename, commit): 
+    # Without using this function, was receiving error: DPI-1015: array size of 157971 is too large
+    start_pos = 0
+    batch_size = 15000
+
+    while start_pos < len(all_data):
+        data = all_data[start_pos:start_pos + batch_size]
+        start_pos += batch_size
+        etl.todb(table=data, dbo=util.get_cursor(db_conn), 
+            tablename=tablename, commit=commit)
 
 def process_csbyst(): 
     alias_id = 0
@@ -194,9 +206,11 @@ def process_zip4():
 
     write_csv(conf.TEMP_ZIP4_OUTFILE_PATH, conf.ZIP4_HEADER, zip4_rows)
 
-def zip4_address_standardization(): 
-    # dsn = get_dsn('ais')
-    # connection = cx_Oracle.Connection(dsn)
+def zip4_address_standardization(
+    db_creds_filepath: str, standardize_addr: bool, commit: bool): 
+
+    db_creds = util.get_creds(db_creds_filepath, ['GIS_AIS'])
+    db_conn = oracle_code.connect_to_db(db_creds) 
     parser = PassyunkParser()
     print("Making address standardization report...")
     zip4_table = etl.fromcsv(conf.TEMP_ZIP4_OUTFILE_PATH)
@@ -244,34 +258,13 @@ def zip4_address_standardization():
         .cutout('addr_comps', 'parsed_comps', 'concat')
 
     print(etl.look(processed_rows))
-    print("Writing tables to Databridge...")
-    # etl.todb(processed_rows, util.get_cursor(connection), conf.ADDRESS_STANDARDIZATION_REPORT_TABLE_NAME)
-
-@click.command()
-@click.option('--api_creds_filepath', help='USPS EPF API JSON Credentials Path')
-@click.option('--db_creds_filepath', help='Database JSON Credentials Path')
-def main(api_creds_filepath, db_creds_filepath): 
-    api_creds = util.get_creds(api_creds_filepath, ['USPS_EPF'])
-    # get_zip_file(api_creds)
-    # extract_files(api_creds)
-
-    # db_creds = util.get_creds(db_creds_filepath, [''])
+    print(f"{'' if (standardize_addr and commit) else 'NOT '}Writing Standardization Report to Databridge...")
+    if standardize_addr: 
+        todb_loop(
+            all_data=processed_rows, db_conn=db_conn, 
+            tablename=conf.ADDRESS_STANDARDIZATION_REPORT_TABLE_NAME, 
+            commit=commit)
     
-    process_csbyst()
-    process_zip4()
-    # Output params
-    # s3_bucket = get_bucket()
-
-    # other tables go to ais_sources account:
-    dsn = get_dsn('ais_sources')
-    connection = cx_Oracle.Connection(dsn)
-    # zip4:
-    etl.fromcsv(conf.TEMP_ZIP4_OUTFILE_PATH).todb(util.get_cursor(connection), conf.ZIP4_WRITE_TABLE_NAME)
-    # cityzip:
-    etl.fromcsv(conf.CITYZIP_OUTFILE_PATH).todb(util.get_cursor(connection), conf.CITYZIP_WRITE_TABLE_NAME)
-    # alias:
-    etl.fromcsv(conf.ALIAS_OUTFILE_PATH).todb(util.get_cursor(connection), conf.ALIAS_WRITE_TABLE_NAME)
-
     # Write processed_rows to uspszip4.csv:
     print(f"Writing cleaned_usps output to {conf.ZIP4_OUTFILE_PATH}")
     etl.cutout(processed_rows, 'base', 'pre', 'name', 'suffix', 'post', 'change_pre', 'change_name', 'change_suffix', 'change_post') \
@@ -284,12 +277,51 @@ def main(api_creds_filepath, db_creds_filepath):
 
     # Write processed_rows to s3:
     print(f"Writing {conf.ZIP4_OUTFILE_PATH} to s3")
-    # s3 = boto3.resource('s3', config=Config(proxies={'http': os.environ['HTTP_PROXY'], 'https': os.environ['HTTPS_PROXY']}))
     s3 = boto3.resource('s3')
-    s3.meta.client.upload_file(conf.ZIP4_OUTFILE_PATH, s3_bucket, 'static files/' + conf.ZIP4_OUTFILE_PATH)
+    s3.meta.client.upload_file(conf.ZIP4_OUTFILE_PATH, conf.S3_BUCKET, conf.ZIP4_OUTFILE_PATH)
 
+def write_out(db_creds_filepath: str, commit: bool): 
+    print("Writing tables to Databridge...")
+    db_creds = util.get_creds(db_creds_filepath, ['GIS_AIS_SOURCES'])
+    db_conn = oracle_code.connect_to_db(db_creds) 
+    
+    # zip4:
+    zip4 = etl.fromcsv(conf.TEMP_ZIP4_OUTFILE_PATH)
+    todb_loop(all_data=zip4, db_conn=db_conn, 
+        tablename=conf.ZIP4_WRITE_TABLE_NAME, commit=commit)
+    # cityzip:
+    cityzip = etl.fromcsv(conf.CITYZIP_OUTFILE_PATH)
+    todb_loop(all_data=cityzip, db_conn=db_conn, 
+        tablename=conf.CITYZIP_WRITE_TABLE_NAME, commit=commit)
+    # alias:
+    alias = etl.fromcsv(conf.ALIAS_OUTFILE_PATH)
+    todb_loop(all_data=alias, db_conn=db_conn, 
+        tablename=conf.ALIAS_WRITE_TABLE_NAME, commit=commit)
+    
+    print(f"Tables {'' if commit else 'NOT '}committed")
+
+@click.command()
+@click.option('--api_creds_filepath', help='USPS EPF API JSON Credentials Path')
+@click.option('--db_creds_filepath', help='Database JSON Credentials Path')
+@click.option('--no_download', is_flag=True, default=False, help='Skip downloading files (must be present and extracted locally)')
+@click.option('--standardize_addr', is_flag=True, default=False, show_default=True, 
+    help='Write Address Standardization Report to Databridge')
+@click.option('--commit/--no_commit', default=True, show_default=True, 
+    help='Commit tables to Databridge')
+def main(api_creds_filepath, db_creds_filepath, no_download, standardize_addr, commit): 
+    if not no_download: 
+        api_creds = util.get_creds(api_creds_filepath, ['USPS_EPF'])
+        get_zip_file(api_creds)
+        extract_files(api_creds)
+
+    process_csbyst()
+    process_zip4()
+    zip4_address_standardization(db_creds_filepath, standardize_addr, commit)
+    write_out(db_creds_filepath, commit)
+    
     # Clean up:
-    os.remove(conf.TEMP_ZIP4_OUTFILE_PATH)
+    for file in [conf.TEMP_ZIP4_OUTFILE_PATH, conf.FOLDER, conf.ZIP_FOLDER]: 
+        os.remove(file)
 
 if __name__ == '__main__': 
     main()
