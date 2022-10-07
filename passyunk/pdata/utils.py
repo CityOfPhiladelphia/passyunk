@@ -15,21 +15,4 @@ def standardize_nulls(val):
         return None if val.strip() == '' else val
     else:
         return None if val == 0 else val
-
-
-class CursorProxy(object):
-    def __init__(self, cursor):
-        self._cursor = cursor
-
-    def executemany(self, statement, parameters, **kwargs):
-        # convert parameters to a list
-        parameters = list(parameters)
-        # pass through to proxied cursor
-        return self._cursor.executemany(statement, parameters, **kwargs)
-
-    def __getattr__(self, item):
-        return getattr(self._cursor, item)
-
-
-def get_cursor(connection):
-    return CursorProxy(connection.cursor())
+        

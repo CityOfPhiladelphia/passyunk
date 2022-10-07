@@ -298,10 +298,7 @@ def zip4_address_standardization(
     print(etl.look(processed_rows))
     print(f"{'' if (standardize_addr) else 'NOT '}Writing Standardization Report to Databridge...")
     if standardize_addr: 
-        todb_loop(
-            all_data=processed_rows, db_conn=db_conn, 
-            tablename=conf.ADDRESS_STANDARDIZATION_REPORT_TABLE_NAME, 
-            commit=commit)
+        oracle_code.append_petl(processed_rows, db_conn, conf.ADDRESS_STANDARDIZATION_REPORT_TABLE_NAME)
     
     # Write processed_rows to uspszip4.csv:
     print(f"Writing cleaned_usps output to {conf.ZIP4_OUTFILE_PATH}")
@@ -330,18 +327,19 @@ def write_out(db_creds_filepath: str, commit: bool):
     
     # zip4:
     zip4 = etl.fromcsv(conf.TEMP_ZIP4_OUTFILE_PATH)
-    todb_loop(all_data=zip4, db_conn=db_conn, 
-        tablename=conf.ZIP4_WRITE_TABLE_NAME, commit=commit)
+    oracle_code.append_petl(zip4, db_conn, conf.ZIP4_WRITE_TABLE_NAME)
     # cityzip:
     cityzip = etl.fromcsv(conf.CITYZIP_OUTFILE_PATH)
-    todb_loop(all_data=cityzip, db_conn=db_conn, 
-        tablename=conf.CITYZIP_WRITE_TABLE_NAME, commit=commit)
+    oracle_code.append_petl(cityzip, db_conn, conf.CITYZIP_WRITE_TABLE_NAME)
     # alias:
     alias = etl.fromcsv(conf.ALIAS_OUTFILE_PATH)
-    todb_loop(all_data=alias, db_conn=db_conn, 
-        tablename=conf.ALIAS_WRITE_TABLE_NAME, commit=commit)
+    oracle_code.append_petl(alias, db_conn, conf.ALIAS_WRITE_TABLE_NAME)
     
-    print(f"Tables {'' if commit else 'NOT '}committed")
+    if commit: 
+        db_conn.rollback()
+    else: 
+        db_conn.commit()
+    print(f'All database transactions were {"ROLLED BACK" if test else "COMMITTED"}')
 
 @click.command()
 @click.option('--api_creds_filepath', help='USPS EPF API JSON Credentials Path')
