@@ -7,6 +7,8 @@ import boto3
 import zipfile
 import tarfile
 import click
+from collections.abc import Iterable
+import cx_Oracle
 # CityGeo:
 import oracle_code
 import usps_epf
@@ -15,6 +17,10 @@ import config as conf
 from passyunk.parser import PassyunkParser
 
 def get_zip_file(creds: dict): 
+    '''
+    Get zip file from USPS EPF API. Inputs: 
+    - creds: API credentials, including username, password, and folder password
+    '''
     with usps_epf.Usps_Epf(creds['user'], creds['password']) as epf: 
         print(epf.get_list())
         epf.set_status('7108662', 'N') # Don't forget to remove this
@@ -27,6 +33,10 @@ def get_zip_file(creds: dict):
         f.write(newest.content)
 
 def extract_files(creds: dict):
+    '''
+    Extract relevant files from downloaded zip file.  
+    - creds: API credentials, including username, password, and folder password
+    '''
     with tarfile.open(conf.ZIP_FOLDER, 'r') as tar: 
         tar.extractall()
 
@@ -36,25 +46,44 @@ def extract_files(creds: dict):
     with zipfile.ZipFile(conf.ZIP4 + '.zip', 'r') as zip: 
         zip.extractall(path=conf.ZIP4, pwd=folder_password)
 
-def write_csv(filename: str, fieldnames: str, data: list): 
+def write_csv(filename: str, fieldnames: list[str], data: list): 
+    '''
+    Write the provided data to CSV. Inputs: 
+    - filename: name of file to create
+    - fieldnames: header row
+    - data: data
+    '''
     with open(filename, 'w', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         for row in data:
             writer.writerow(row)
 
-def todb_loop(all_data, db_conn, tablename, commit): 
-    # Without using this function, was receiving error: DPI-1015: array size of 157971 is too large
+def todb_loop(all_data: Iterable, db_conn: cx_Oracle.Connection, tablename: str, commit: bool): 
+    '''
+    Append data in batches to a database. Inputs: 
+    - all_data:  An iterable of data to append
+    - db_conn: Database connection object
+    - tablename: Name of table to append to
+    - commit: Whether or not to commit the data (useful to not commit for testing purposes) 
+    '''
+    # Without using this function, was receiving error: DPI-1015: array size is too large
     start_pos = 0
     batch_size = 15000
-
-    while start_pos < len(all_data):
+    print(f'Appending to "{tablename}"')
+    while True:
+        print(f'    appending rows [{start_pos}:{start_pos + batch_size-1}]')
         data = all_data[start_pos:start_pos + batch_size]
+        if data == []: 
+            break
         start_pos += batch_size
         etl.todb(table=data, dbo=util.get_cursor(db_conn), 
             tablename=tablename, commit=commit)
 
 def process_csbyst(): 
+    '''
+    Process the USPS CSBYST data
+    '''
     alias_id = 0
     city_id = 0
     alias_rows = []
@@ -139,6 +168,9 @@ def process_csbyst():
     write_csv(conf.CITYZIP_OUTFILE_PATH, conf.CITYZIP_HEADER, cityzip_rows)
 
 def process_zip4(): 
+    '''
+    Process the USPS ZIP4 data
+    '''
     zip4_id = 0
     zip4_rows = []
     
@@ -208,6 +240,12 @@ def process_zip4():
 
 def zip4_address_standardization(
     db_creds_filepath: str, standardize_addr: bool, commit: bool): 
+    '''
+    Process the ZIP4 Address standardization, writing to Oracle, CSV, and S3. Inputs: 
+    - db_creds_filepath: Filepath of Oracle database credentials
+    - standardize_addr: Whether to even simulate appending the changes to Oracle?
+    - commit: Whether to actually commit the changes to Oracle
+    '''
 
     db_creds = util.get_creds(db_creds_filepath, ['GIS_AIS'])
     db_conn = oracle_code.connect_to_db(db_creds) 
@@ -258,7 +296,7 @@ def zip4_address_standardization(
         .cutout('addr_comps', 'parsed_comps', 'concat')
 
     print(etl.look(processed_rows))
-    print(f"{'' if (standardize_addr and commit) else 'NOT '}Writing Standardization Report to Databridge...")
+    print(f"{'' if (standardize_addr) else 'NOT '}Writing Standardization Report to Databridge...")
     if standardize_addr: 
         todb_loop(
             all_data=processed_rows, db_conn=db_conn, 
@@ -281,6 +319,11 @@ def zip4_address_standardization(
     s3.meta.client.upload_file(conf.ZIP4_OUTFILE_PATH, conf.S3_BUCKET, conf.ZIP4_OUTFILE_PATH)
 
 def write_out(db_creds_filepath: str, commit: bool): 
+    '''
+    Write out tables to Oracle. Inputs: 
+    - db_creds_filepath: Location of Oracle credentials
+    - commit: Whether to actually commit the results to database (False for testing)
+    '''
     print("Writing tables to Databridge...")
     db_creds = util.get_creds(db_creds_filepath, ['GIS_AIS_SOURCES'])
     db_conn = oracle_code.connect_to_db(db_creds) 
@@ -303,12 +346,18 @@ def write_out(db_creds_filepath: str, commit: bool):
 @click.command()
 @click.option('--api_creds_filepath', help='USPS EPF API JSON Credentials Path')
 @click.option('--db_creds_filepath', help='Database JSON Credentials Path')
-@click.option('--no_download', is_flag=True, default=False, help='Skip downloading files (must be present and extracted locally)')
+@click.option('--no_download', is_flag=True, default=False, help='Skip downloading files (files must already be present and extracted locally)')
 @click.option('--standardize_addr', is_flag=True, default=False, show_default=True, 
     help='Write Address Standardization Report to Databridge')
 @click.option('--commit/--no_commit', default=True, show_default=True, 
-    help='Commit tables to Databridge')
+    help='Commit tables to Databridge. Choose --no_commit for testing purposes.')
 def main(api_creds_filepath, db_creds_filepath, no_download, standardize_addr, commit): 
+    '''
+    \b
+    Script to refresh various USPS ZIP4 data by pulling the newest data
+    from the USPS EPF API, downloading, extracting, and appending to Oracle and S3. 
+    Run `python format_usps_crlf --help` for help on this script's inputs. 
+    '''
     if not no_download: 
         api_creds = util.get_creds(api_creds_filepath, ['USPS_EPF'])
         get_zip_file(api_creds)
@@ -319,7 +368,6 @@ def main(api_creds_filepath, db_creds_filepath, no_download, standardize_addr, c
     zip4_address_standardization(db_creds_filepath, standardize_addr, commit)
     write_out(db_creds_filepath, commit)
     
-    # Clean up:
     for file in [conf.TEMP_ZIP4_OUTFILE_PATH, conf.FOLDER, conf.ZIP_FOLDER]: 
         os.remove(file)
 
