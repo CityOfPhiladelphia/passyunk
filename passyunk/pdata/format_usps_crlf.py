@@ -1,5 +1,4 @@
 import re
-import csv
 import os
 import sys
 import petl as etl
@@ -7,8 +6,7 @@ import boto3
 import zipfile
 import tarfile
 import click
-from collections.abc import Iterable
-import cx_Oracle
+import shutil
 # CityGeo:
 import oracle_code
 import usps_epf
@@ -46,41 +44,7 @@ def extract_files(creds: dict):
     with zipfile.ZipFile(conf.ZIP4 + '.zip', 'r') as zip: 
         zip.extractall(path=conf.ZIP4, pwd=folder_password)
 
-def write_csv(filename: str, fieldnames: list[str], data: list): 
-    '''
-    Write the provided data to CSV. Inputs: 
-    - filename: name of file to create
-    - fieldnames: header row
-    - data: data
-    '''
-    with open(filename, 'w', newline='') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-        for row in data:
-            writer.writerow(row)
-
-def todb_loop(all_data: Iterable, db_conn: cx_Oracle.Connection, tablename: str, commit: bool): 
-    '''
-    Append data in batches to a database. Inputs: 
-    - all_data:  An iterable of data to append
-    - db_conn: Database connection object
-    - tablename: Name of table to append to
-    - commit: Whether or not to commit the data (useful to not commit for testing purposes) 
-    '''
-    # Without using this function, was receiving error: DPI-1015: array size is too large
-    start_pos = 0
-    batch_size = 15000
-    print(f'Appending to "{tablename}"')
-    while True:
-        print(f'    appending rows [{start_pos}:{start_pos + batch_size-1}]')
-        data = all_data[start_pos:start_pos + batch_size]
-        if data == []: 
-            break
-        start_pos += batch_size
-        etl.todb(table=data, dbo=util.get_cursor(db_conn), 
-            tablename=tablename, commit=commit)
-
-def process_csbyst(): 
+def process_csbyst(db_creds_filepath, commit): 
     '''
     Process the USPS CSBYST data
     '''
@@ -163,11 +127,14 @@ def process_csbyst():
             if ch[0] == 'Z' and ch[1:6] in conf.ZIPS:
                 print("Zone Split")
                 print(ch)
-    # Why bother writing the list to CSV when you could write each row automatically or read the list into PETL?
-    write_csv(conf.ALIAS_OUTFILE_PATH, conf.ALIAS_HEADER, alias_rows)
-    write_csv(conf.CITYZIP_OUTFILE_PATH, conf.CITYZIP_HEADER, cityzip_rows)
+    
+    db_creds = util.get_creds(db_creds_filepath, ['GIS_AIS_SOURCES'])
+    db_conn = oracle_code.connect_to_db(db_creds) 
+    oracle_code.append_petl(alias_rows, db_conn, conf.ALIAS_WRITE_TABLE_NAME, truncate=True)
+    oracle_code.append_petl(cityzip_rows, db_conn, conf.CITYZIP_WRITE_TABLE_NAME, truncate=True)
+    oracle_code.commit_transactions(db_conn, commit)
 
-def process_zip4(): 
+def process_zip4(db_creds_filepath, commit): 
     '''
     Process the USPS ZIP4 data
     '''
@@ -236,7 +203,10 @@ def process_zip4():
 
                     zip4_rows.append(row)
 
-    write_csv(conf.TEMP_ZIP4_OUTFILE_PATH, conf.ZIP4_HEADER, zip4_rows)
+    db_creds = util.get_creds(db_creds_filepath, ['GIS_AIS_SOURCES'])
+    db_conn = oracle_code.connect_to_db(db_creds) 
+    oracle_code.append_petl(zip4_rows, db_conn, conf.ZIP4_WRITE_TABLE_NAME, truncate=True)
+    oracle_code.commit_transactions(db_conn, commit)
 
 def zip4_address_standardization(
     db_creds_filepath: str, standardize_addr: bool, commit: bool): 
@@ -298,7 +268,10 @@ def zip4_address_standardization(
     print(etl.look(processed_rows))
     print(f"{'' if (standardize_addr) else 'NOT '}Writing Standardization Report to Databridge...")
     if standardize_addr: 
-        oracle_code.append_petl(processed_rows, db_conn, conf.ADDRESS_STANDARDIZATION_REPORT_TABLE_NAME)
+        oracle_code.append_petl(
+            processed_rows, db_conn, conf.ADDRESS_STANDARDIZATION_REPORT_TABLE_NAME, 
+            truncate=True)
+        oracle_code.commit_transactions(db_conn, commit)
     
     # Write processed_rows to uspszip4.csv:
     print(f"Writing cleaned_usps output to {conf.ZIP4_OUTFILE_PATH}")
@@ -314,32 +287,6 @@ def zip4_address_standardization(
     print(f"Writing {conf.ZIP4_OUTFILE_PATH} to s3")
     s3 = boto3.resource('s3')
     s3.meta.client.upload_file(conf.ZIP4_OUTFILE_PATH, conf.S3_BUCKET, conf.ZIP4_OUTFILE_PATH)
-
-def write_out(db_creds_filepath: str, commit: bool): 
-    '''
-    Write out tables to Oracle. Inputs: 
-    - db_creds_filepath: Location of Oracle credentials
-    - commit: Whether to actually commit the results to database (False for testing)
-    '''
-    print("Writing tables to Databridge...")
-    db_creds = util.get_creds(db_creds_filepath, ['GIS_AIS_SOURCES'])
-    db_conn = oracle_code.connect_to_db(db_creds) 
-    
-    # zip4:
-    zip4 = etl.fromcsv(conf.TEMP_ZIP4_OUTFILE_PATH)
-    oracle_code.append_petl(zip4, db_conn, conf.ZIP4_WRITE_TABLE_NAME)
-    # cityzip:
-    cityzip = etl.fromcsv(conf.CITYZIP_OUTFILE_PATH)
-    oracle_code.append_petl(cityzip, db_conn, conf.CITYZIP_WRITE_TABLE_NAME)
-    # alias:
-    alias = etl.fromcsv(conf.ALIAS_OUTFILE_PATH)
-    oracle_code.append_petl(alias, db_conn, conf.ALIAS_WRITE_TABLE_NAME)
-    
-    if commit: 
-        db_conn.rollback()
-    else: 
-        db_conn.commit()
-    print(f'All database transactions were {"ROLLED BACK" if test else "COMMITTED"}')
 
 @click.command()
 @click.option('--api_creds_filepath', help='USPS EPF API JSON Credentials Path')
@@ -361,13 +308,17 @@ def main(api_creds_filepath, db_creds_filepath, no_download, standardize_addr, c
         get_zip_file(api_creds)
         extract_files(api_creds)
 
-    process_csbyst()
-    process_zip4()
+    process_csbyst(db_creds_filepath, commit)
+    process_zip4(db_creds_filepath, commit)
     zip4_address_standardization(db_creds_filepath, standardize_addr, commit)
-    write_out(db_creds_filepath, commit)
     
-    for file in [conf.TEMP_ZIP4_OUTFILE_PATH, conf.FOLDER, conf.ZIP_FOLDER]: 
-        os.remove(file)
+    if commit: 
+        for obj in [conf.TEMP_ZIP4_OUTFILE_PATH, conf.FOLDER, conf.ZIP_FOLDER]: 
+            try: 
+                os.remove(obj)
+            except PermissionError: 
+                shutil.rmtree(obj)
+            print(f'Removed "{obj}"')
 
 if __name__ == '__main__': 
     main()
