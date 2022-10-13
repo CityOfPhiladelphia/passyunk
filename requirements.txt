@@ -1,1 +1,2 @@
+importlib-metadata==5.0.0
 fuzzywuzzy==0.11.1
