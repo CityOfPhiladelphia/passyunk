@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='passyunk',
-    version='1.5.0',
+    version='1.6.0',
     packages=['passyunk', 'passyunk/pdata'],
     package_data = {
         '': ['*.csv'],
