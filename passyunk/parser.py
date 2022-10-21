@@ -19,7 +19,7 @@ import csv
 import os
 import re
 import sys
-import warnings
+import logging
 import subprocess
 from importlib import metadata
 from copy import deepcopy
@@ -664,7 +664,7 @@ def check_version():
 
         current_version = Version(metadata.version('passyunk'))
         if current_version < newest_version: 
-            warnings.warn(f'''
+            logging.warning(f'''
 
 There is a new version of the Passyunk module available with updated data. 
 Current: {current_version.version}
@@ -673,7 +673,7 @@ Run `pip install git+https://github.com/CityOfPhiladelphia/passyunk` to upgrade
 
 ''')
     except Exception as e: 
-        warnings.warn(f'Error when attempting to check module version\nError Text: {e}')
+        logging.warning(f'Error when attempting to check module version\nError Text: {e}')
 
 '''
 RUN
@@ -695,16 +695,16 @@ cl_suffix_lookup = create_centerline_street_lookup()
 # if the user doesn't have the zip4 or centerline file, parser will still work
 is_zip_file = create_zip4_lookup()
 if not is_zip_file:
-    warnings.warn('USPS file not found.')
+    logging.warning('USPS file not found.')
 is_cl_file = create_cl_lookup()
 if not is_cl_file:
-    warnings.warn('Centerline file not found.')
+    logging.warning('Centerline file not found.')
 is_al_file = create_al_lookup()
 if not is_al_file:
-    warnings.warn('Alias file not found.')
+    logging.warning('Alias file not found.')
 is_election_file = create_election_lookup()
 if not is_election_file:
-    warnings.warn('Election file not found.')
+    logging.warning('Election file not found.')
 
 check_version()
 
