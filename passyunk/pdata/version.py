@@ -27,7 +27,7 @@ class Version:
             self.prerelease = m['prerelease']
             self.buildmetadata= m['buildmetadata']
     
-    def check(self, version: str, return_match) -> re.match: 
+    def check(self, version: str, return_match: bool) -> re.match: 
         '''
         Raise a ValueError if a version does not use valid SemVer syntax, otherwise 
         return a re.match object that splits the fields.
@@ -59,9 +59,10 @@ class Version:
 
     def increment_minor(self) -> str: 
         '''
-        Increment the minor version by one and return a new Version. 
+        Increment the minor version by one and return a new Version, resetting 
+        patch, prerelease, and buildmetadata. 
         '''
-        return self.create(self.major, self.minor + 1, self.patch, self.prerelease, self.buildmetadata)
+        return self.create(self.major, self.minor + 1, 0, None, None)
     
     def compare(self, other_version: 'Version') -> str: 
         '''
