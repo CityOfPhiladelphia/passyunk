@@ -3,11 +3,13 @@
 Philadelphia Address Standardizer
 
 Author: Tom Swanson
+Revisions: James Midkiff
 
 Created: 8/25/2014
 Last Updated: 2/9/2016
+Revised: 10/2022
 
-Version: 1.0
+Version: 2.0.0
 
 """
 
@@ -18,6 +20,8 @@ import os
 import re
 import sys
 import warnings
+import subprocess
+from importlib import metadata
 from copy import deepcopy
 
 from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2, create_al_lookup
@@ -28,6 +32,7 @@ from .parser_addr import parse_addr_1, name_switch, is_centerline_street_name, i
     is_centerline_street_suffix, is_centerline_name, Address
 from .zip4 import create_zip4_lookup, get_zip_info
 from .landmark import Landmark
+from .pdata.version import Version
 
 is_cl_file = False
 is_al_file = False
@@ -647,6 +652,23 @@ def input_cleanup(address_uber, item):
 
     return item
 
+def check_version(): 
+    '''
+    New Version 2.0.0
+    '''
+    try: 
+        subprocess.run(['git', 'fetch', '--all', '--tags'], text=True)
+        process = subprocess.run(['git', 'describe', '--tags', '--abbrev=0'], text=True, capture_output=True)
+        newest_tag = process.stdout.strip()
+        newest_version = Version(newest_tag)
+
+        current_version = Version(metadata.version('passyunk'))
+        if current_version < newest_version: 
+            warnings.warn(f'''There is a new version of the Passyunk module available with updated data
+Current: {current_version.version}. Newest: {newest_version.version}
+Run `pip install git+https://github.com/CityOfPhiladelphia/passyunk` to upgrade''')
+    except Exception as e: 
+        warnings.warn(f'Error when attempting to check module version\nError Text: {e}')
 
 '''
 RUN
@@ -679,6 +701,7 @@ is_election_file = create_election_lookup()
 if not is_election_file:
     warnings.warn('Election file not found.')
 
+check_version()
 
 class PassyunkParser:
     def __init__(self, return_dict=True, MAX_RANGE=200):
