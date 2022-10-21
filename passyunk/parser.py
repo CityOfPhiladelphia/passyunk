@@ -664,9 +664,14 @@ def check_version():
 
         current_version = Version(metadata.version('passyunk'))
         if current_version < newest_version: 
-            warnings.warn(f'''There is a new version of the Passyunk module available with updated data
-Current: {current_version.version}. Newest: {newest_version.version}
-Run `pip install git+https://github.com/CityOfPhiladelphia/passyunk` to upgrade''')
+            warnings.warn(f'''
+
+There is a new version of the Passyunk module available with updated data. 
+Current: {current_version.version}
+Newest: {newest_version.version}
+Run `pip install git+https://github.com/CityOfPhiladelphia/passyunk` to upgrade
+
+''')
     except Exception as e: 
         warnings.warn(f'Error when attempting to check module version\nError Text: {e}')
 
