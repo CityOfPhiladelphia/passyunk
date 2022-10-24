@@ -3,14 +3,21 @@
 Address parser and standardizer for the City of Philadelphia
 
 ## Installation
-
-    pip install git+https://github.com/CityOfPhiladelphia/passyunk
-
-Optionally, copy USPS, centerlines, and elections files to `/path/to/passyunk/passyunk/pdata`. You can find out where Passyunk was installed with:
-
-    python
-    import passyunk
-    passyunk.__file__
+```
+pip install git+https://github.com/CityOfPhiladelphia/passyunk
+```
+To find where passyunk is installed, from the command line run
+```
+python
+import passyunk
+passyunk.__file__
+```
+### 
+If you have been granted access to the private data files, run 
+```
+pip install git+ssh://git@github.com/CityOfPhiladelphia/passyunk_automation.git -v --force-reinstall
+```
+which will move the private data files into the `passyunk/pdata` folder. Note this command must be run from the same environment that passyunk itself was installed in such as a virtual environment.
 
 ## Usage
 

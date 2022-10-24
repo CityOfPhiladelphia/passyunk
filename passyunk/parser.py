@@ -665,11 +665,13 @@ def check_version():
         current_version = Version(metadata.version('passyunk'))
         if current_version < newest_version: 
             logging.warning(f'''
-
 There is a new version of the Passyunk module available with updated data. 
 Current: {current_version.version}
 Newest: {newest_version.version}
 Run `pip install git+https://github.com/CityOfPhiladelphia/passyunk` to upgrade
+
+If you have access to the private data, also run 
+`pip install git+ssh://git@github.com/CityOfPhiladelphia/passyunk_automation.git -v --force-reinstall`
 
 ''')
     except Exception as e: 
