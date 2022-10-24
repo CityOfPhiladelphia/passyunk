@@ -17,7 +17,9 @@ class PostInstallCommand(install):
         install.run(self)
         print('PostInstallCommand')
         print(f'{os.getcwd() = }')
-        s = subprocess.run(['git clone git@github.com:CityOfPhiladelphia/passyunk_automation.git --depth 1 --filter=blob:none --sparse'])
+        s = subprocess.run([
+            'git', 'clone', 'git@github.com:CityOfPhiladelphia/passyunk_automation.git', 
+            '--depth', '1', '--filter=blob:none', '--sparse', 'testing'])
         print(s)
         # PUT YOUR POST-INSTALL SCRIPT HERE or CALL A FUNCTION
 
