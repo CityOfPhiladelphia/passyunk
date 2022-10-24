@@ -25,7 +25,7 @@ class PostInstallCommand(install):
 
 setup(
     name='passyunk',
-    version='1.15.0',
+    version='1.16.0',
     packages=['passyunk', 'passyunk/pdata'],
     package_data = {
         '': ['*.csv'],
