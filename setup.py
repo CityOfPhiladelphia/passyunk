@@ -30,7 +30,7 @@ setup(
     description='address parser for City of Philadelphia addresses',
     install_requires=['fuzzywuzzy'], 
     cmdclass={
-        # 'develop': PostDevelopCommand,
+        'develop': PostDevelopCommand,
         'install': PostInstallCommand,
     },
 )
