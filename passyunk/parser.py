@@ -658,8 +658,8 @@ def check_version():
     '''
     try: 
         subprocess.run(['git', 'init'], text=True)
-        subprocess.run(['git', 'remote', 'add', 'origin', 'https://github.com/CityOfPhiladelphia/passyunk'], text=True)
-        subprocess.run(['git', 'fetch', 'origin', '--all', '--tags'], text=True)
+        subprocess.run(['git', 'remote', 'add', 'data', 'https://github.com/CityOfPhiladelphia/passyunk'], text=True)
+        subprocess.run(['git', 'fetch', 'data', '--tags'], text=True)
         process = subprocess.run(['git', 'describe', '--tags', '--abbrev=0'], text=True, capture_output=True)
         newest_tag = process.stdout.strip()
         newest_version = Version(newest_tag)
