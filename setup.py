@@ -1,6 +1,8 @@
 from setuptools import setup
 from setuptools.command.develop import develop
 from setuptools.command.install import install
+import os
+import subprocess
 
 class PostDevelopCommand(develop):
     """Post-installation for development mode."""
@@ -14,6 +16,9 @@ class PostInstallCommand(install):
     def run(self):
         install.run(self)
         print('PostInstallCommand')
+        print(f'{os.getcwd() = }')
+        s = subprocess.run(['git clone git@github.com:CityOfPhiladelphia/passyunk_automation.git --depth 1 --filter=blob:none --sparse'])
+        print(s)
         # PUT YOUR POST-INSTALL SCRIPT HERE or CALL A FUNCTION
 
 setup(
