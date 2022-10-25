@@ -21,8 +21,8 @@ import re
 import sys
 import logging
 from importlib_metadata import PackageNotFoundError
-import requests
 from importlib import metadata
+import requests
 from copy import deepcopy
 
 from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2, create_al_lookup
@@ -685,13 +685,13 @@ Run `pip install git+https://github.com/CityOfPhiladelphia/passyunk` to upgrade
         
         newest_version_private = version.find_newest(tags_private)
         try: 
-            current_version_private = metadata.version('passyunk_automation')
+            current_version_private = version.Version(metadata.version('passyunk_automation'))
             if current_version_private < newest_version_private: 
                 logging.warning(f'''
 There is a new version of the private Passyunk module available with updated data. 
 Current: {current_version.version}
 Newest: {newest_version.version}
-Run `pip install git+ssh://git@github.com/CityOfPhiladelphia/passyunk_automation.git -v --force-reinstall`
+Run `pip install git+ssh://git@github.com/CityOfPhiladelphia/passyunk_automation.git`
 from the same environment that the public passyunk module was installed in.
 ''')
             else: 
