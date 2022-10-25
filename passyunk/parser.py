@@ -695,7 +695,7 @@ Run `pip install git+ssh://git@github.com/CityOfPhiladelphia/passyunk_automation
 from the same environment that the public passyunk module was installed in.
 ''')
             else: 
-                print(f'Current Private Version: {current_version} is up-to-date.')
+                print(f'Current Private Version: {current_version_private} is up-to-date.')
         except PackageNotFoundError: 
             print('Unable to access private data - you may not have sufficient permissions or it has not been installed in this environment')
         except Exception as e: 
