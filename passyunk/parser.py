@@ -20,8 +20,8 @@ import os
 import re
 import sys
 import logging
-from importlib_metadata import PackageNotFoundError
 from importlib import metadata
+import importlib_metadata
 import requests
 from copy import deepcopy
 
@@ -696,7 +696,7 @@ from the same environment that the public passyunk module was installed in.
 ''')
             else: 
                 print(f'Current Private Version: {current_version_private} is up-to-date.')
-        except PackageNotFoundError: 
+        except metadata.PackageNotFoundError: 
             print('Unable to access private data - you may not have sufficient permissions or it has not been installed in this environment')
         except Exception as e: 
             logging.warning(f'Error when attempting to check private module version\nError Text: {e}')
