@@ -105,3 +105,18 @@ class Version:
 
     def __ne__(self, other_version: 'Version'): 
         return self.compare(other_version) != 'equal'
+
+    def __repr__(self): 
+        return self.version
+
+def find_newest(array: list[str]) -> 'Version': 
+    '''
+    Return the newest Version out of an array of elements coercible to Versions, 
+    ignoring prerelease and buildmetadata
+    '''
+    current_max = Version('0.0.0')
+    for v in array: 
+        v = Version(v)
+        if v > current_max: 
+            current_max = v
+    return current_max

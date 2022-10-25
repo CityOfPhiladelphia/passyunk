@@ -20,7 +20,8 @@ import os
 import re
 import sys
 import logging
-import subprocess
+from importlib_metadata import PackageNotFoundError
+import requests
 from importlib import metadata
 from copy import deepcopy
 
@@ -32,7 +33,7 @@ from .parser_addr import parse_addr_1, name_switch, is_centerline_street_name, i
     is_centerline_street_suffix, is_centerline_name, Address
 from .zip4 import create_zip4_lookup, get_zip_info
 from .landmark import Landmark
-from .pdata.version import Version
+from .pdata import version
 
 is_cl_file = False
 is_al_file = False
@@ -657,27 +658,50 @@ def check_version():
     New Version 2.0.0
     '''
     try: 
-        subprocess.run(['git', 'init'], text=True)
-        subprocess.run(['git', 'remote', 'add', 'data', 'https://github.com/CityOfPhiladelphia/passyunk'], text=True)
-        subprocess.run(['git', 'fetch', 'data', '--tags'], text=True)
-        process = subprocess.run(['git', 'describe', '--tags', '--abbrev=0'], text=True, capture_output=True)
-        newest_tag = process.stdout.strip()
-        newest_version = Version(newest_tag)
-
-        current_version = Version(metadata.version('passyunk'))
+        r = requests.get("https://api.github.com/repos/CityOfPhiladelphia/passyunk/git/matching-refs/tags")
+        tags, tags_private = [], []
+        for ref in r.json():
+            if ref['object']['type'] == 'tag':
+                string = ref['ref']
+                find = re.findall('(?<=refs/tags/).*', string)
+                if find != []:
+                    s = find[0]
+                    if re.findall('\+private', s) != []: 
+                        tags_private.append(s)
+                    else: 
+                        tags.append(s)
+        
+        newest_version = version.find_newest(tags)
+        current_version = version.Version(metadata.version('passyunk'))
         if current_version < newest_version: 
             logging.warning(f'''
 There is a new version of the Passyunk module available with updated data. 
 Current: {current_version.version}
 Newest: {newest_version.version}
 Run `pip install git+https://github.com/CityOfPhiladelphia/passyunk` to upgrade
-
-If you have access to the private data, also run 
-`pip install git+ssh://git@github.com/CityOfPhiladelphia/passyunk_automation.git -v --force-reinstall`
-
 ''')
+        else: 
+            print(f'Current Version: {current_version} is up-to-date.')
+        
+        newest_version_private = version.find_newest(tags_private)
+        try: 
+            current_version_private = metadata.version('passyunk_automation')
+            if current_version_private < newest_version_private: 
+                logging.warning(f'''
+There is a new version of the private Passyunk module available with updated data. 
+Current: {current_version.version}
+Newest: {newest_version.version}
+Run `pip install git+ssh://git@github.com/CityOfPhiladelphia/passyunk_automation.git -v --force-reinstall`
+from the same environment that the public passyunk module was installed in.
+''')
+            else: 
+                print(f'Current Private Version: {current_version} is up-to-date.')
+        except PackageNotFoundError: 
+            print('Unable to access private data - you may not have sufficient permissions or it has not been installed in this environment')
+        except Exception as e: 
+            logging.warning(f'Error when attempting to check private module version\nError Text: {e}')
     except Exception as e: 
-        logging.warning(f'Error when attempting to check module version\nError Text: {e}')
+        logging.warning(f'Error when attempting to check public module version\nError Text: {e}')
 
 '''
 RUN
