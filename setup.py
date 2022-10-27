@@ -12,5 +12,5 @@ setup(
     author='tom.swanson',
     author_email='',
     description='address parser for City of Philadelphia addresses',
-    install_requires=['fuzzywuzzy'], 
+    install_requires=['fuzzywuzzy', 'Levenshtein', 'requests'], 
 )
