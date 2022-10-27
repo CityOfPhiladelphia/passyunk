@@ -21,7 +21,6 @@ import re
 import sys
 import logging
 from importlib import metadata
-import importlib_metadata
 import requests
 from copy import deepcopy
 
@@ -681,7 +680,7 @@ Newest: {newest_version.version}
 Run `pip install git+https://github.com/CityOfPhiladelphia/passyunk` to upgrade
 ''')
         else: 
-            print(f'Current Passyunk Version: {current_version} is up-to-date.')
+            print(f'Current Passyunk Version: {current_version} is up-to-date')
         
         newest_version_private = version.find_newest(tags_private)
         try: 
@@ -695,7 +694,7 @@ Run `pip install git+ssh://git@github.com/CityOfPhiladelphia/passyunk_automation
 from the same environment that the public passyunk module was installed in.
 ''')
             else: 
-                print(f'Current Passyunk Private Data Version: {current_version_private} is up-to-date.')
+                print(f'Current Passyunk Private Data Version: {current_version_private} is up-to-date')
         except metadata.PackageNotFoundError: 
             print('Unable to access private data - you may not have sufficient permissions or it is not installed in this environment')
         except Exception as e: 
