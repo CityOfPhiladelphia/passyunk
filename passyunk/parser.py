@@ -3,11 +3,13 @@
 Philadelphia Address Standardizer
 
 Author: Tom Swanson
+Revisions: James Midkiff
 
 Created: 8/25/2014
 Last Updated: 2/9/2016
+Revised: 10/2022
 
-Version: 1.0
+Version: 2.0.0
 
 """
 
@@ -17,7 +19,9 @@ import csv
 import os
 import re
 import sys
-import warnings
+import logging
+from importlib import metadata
+import requests
 from copy import deepcopy
 
 from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2, create_al_lookup
@@ -28,6 +32,7 @@ from .parser_addr import parse_addr_1, name_switch, is_centerline_street_name, i
     is_centerline_street_suffix, is_centerline_name, Address
 from .zip4 import create_zip4_lookup, get_zip_info
 from .landmark import Landmark
+from .pdata import version
 
 is_cl_file = False
 is_al_file = False
@@ -647,6 +652,55 @@ def input_cleanup(address_uber, item):
 
     return item
 
+def check_version(): 
+    '''
+    New Version 2.0.0
+    '''
+    try: 
+        r = requests.get("https://api.github.com/repos/CityOfPhiladelphia/passyunk/git/matching-refs/tags")
+        tags, tags_private = [], []
+        for ref in r.json():
+            if ref['object']['type'] == 'tag':
+                string = ref['ref']
+                find = re.findall('(?<=refs/tags/).*', string)
+                if find != []:
+                    s = find[0]
+                    if re.findall('\+private', s) != []: 
+                        tags_private.append(s)
+                    else: 
+                        tags.append(s)
+        
+        newest_version = version.find_newest(tags)
+        current_version = version.Version(metadata.version('passyunk'))
+        if current_version < newest_version: 
+            logging.warning(f'''
+There is a new version of the Passyunk module available with updated data. 
+Current: {current_version.version}
+Newest: {newest_version.version}
+Run `pip install git+https://github.com/CityOfPhiladelphia/passyunk` to upgrade
+''')
+        else: 
+            print(f'Current Passyunk Version: {current_version} is up-to-date')
+        
+        newest_version_private = version.find_newest(tags_private)
+        try: 
+            current_version_private = version.Version(metadata.version('passyunk_automation'))
+            if current_version_private < newest_version_private: 
+                logging.warning(f'''
+There is a new version of the private Passyunk module available with updated data. 
+Current: {current_version_private.version}
+Newest: {newest_version_private.version}
+Run `pip install git+ssh://git@github.com/CityOfPhiladelphia/passyunk_automation.git`
+from the same environment that the public passyunk module was installed in.
+''')
+            else: 
+                print(f'Current Passyunk Private Data Version: {current_version_private} is up-to-date')
+        except metadata.PackageNotFoundError: 
+            print('Unable to access private data - you may not have sufficient permissions or it is not installed in this environment')
+        except Exception as e: 
+            logging.warning(f'Error when attempting to check private module version\nError Text: {e}')
+    except Exception as e: 
+        logging.warning(f'Error when attempting to check public module version\nError Text: {e}')
 
 '''
 RUN
@@ -668,17 +722,18 @@ cl_suffix_lookup = create_centerline_street_lookup()
 # if the user doesn't have the zip4 or centerline file, parser will still work
 is_zip_file = create_zip4_lookup()
 if not is_zip_file:
-    warnings.warn('USPS file not found.')
+    logging.warning('USPS file not found.')
 is_cl_file = create_cl_lookup()
 if not is_cl_file:
-    warnings.warn('Centerline file not found.')
+    logging.warning('Centerline file not found.')
 is_al_file = create_al_lookup()
 if not is_al_file:
-    warnings.warn('Alias file not found.')
+    logging.warning('Alias file not found.')
 is_election_file = create_election_lookup()
 if not is_election_file:
-    warnings.warn('Election file not found.')
+    logging.warning('Election file not found.')
 
+check_version()
 
 class PassyunkParser:
     def __init__(self, return_dict=True, MAX_RANGE=200):
