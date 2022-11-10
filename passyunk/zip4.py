@@ -126,11 +126,13 @@ def parse_unit_num(unitnum):
 
 def test_zip4_file():
     path = csv_path(zip4file)
+    print(f'Checking csv existence at: {path}..')
     return os.path.isfile(path)
 
 
 def create_zip4_lookup():
     if not test_zip4_file():
+        print('zip4 csv file doesnt exist.')
         return False
     path = csv_path(zip4file)
     f = open(path, 'r')

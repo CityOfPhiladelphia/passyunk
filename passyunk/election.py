@@ -51,11 +51,13 @@ class NameOnly:
 
 def test_election_file():
     path = csv_path(blocksfile)
+    print(f'Checking csv existence at: {path}..')
     return os.path.isfile(path)
 
 
 def create_election_lookup():
     if not test_election_file():
+        print('election csv file doesnt exist.')
         return False
 
     path = csv_path(blocksfile)
