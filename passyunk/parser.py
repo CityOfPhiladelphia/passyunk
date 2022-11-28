@@ -9,8 +9,6 @@ Created: 8/25/2014
 Last Updated: 2/9/2016
 Revised: 10/2022
 
-Version: 2.0.0
-
 """
 
 from __future__ import absolute_import
@@ -600,7 +598,6 @@ def parse(item, MAX_RANGE):
 
     return address_uber
 
-
 def input_cleanup(address_uber, item):
     # defensive, just in case you get some ridiculous input
     item = item[0:80]
@@ -654,7 +651,8 @@ def input_cleanup(address_uber, item):
 
 def check_version(): 
     '''
-    New Version 2.0.0
+    Check that the latest version tag on Github matches this version of the package. 
+    If the passyunk_automation private package is installed, do the same for that as well.
     '''
     try: 
         r = requests.get("https://api.github.com/repos/CityOfPhiladelphia/passyunk/git/matching-refs/tags")
