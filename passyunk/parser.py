@@ -29,8 +29,12 @@ from .parser_addr import parse_addr_1, name_switch, is_centerline_street_name, i
 from .landmark import Landmark # landmarks.csv - Public
 from .pdata import version
 # Private Data
-from passyunk_automation.zip4 import create_zip4_lookup, get_zip_info # usps_zip4s.csv - Private
-from passyunk_automation.election import create_election_lookup, get_election_info # election_block.csv - Private
+try: 
+    from passyunk_automation.zip4 import create_zip4_lookup, get_zip_info # usps_zip4s.csv - Private
+    from passyunk_automation.election import create_election_lookup, get_election_info # election_block.csv - Private
+    private_installed = True
+except ModuleNotFoundError as e: 
+    private_installed = False
 
 is_cl_file = False
 is_al_file = False
@@ -72,15 +76,12 @@ class CenterlineNameOnly:
         self.low = row[1]
         self.high = row[2]
 
-
 '''
 SETUP FUNCTIONS
 '''
 
-
 def csv_path(file_name):
     return os.path.join(cwd, file_name + '.csv')
-
 
 def create_name_switch_lookup():
     path = csv_path('name_switch')
@@ -95,7 +96,6 @@ def create_name_switch_lookup():
         print('Error opening ' + path, sys.exc_info()[0])
     f.close()
     return lookup
-
 
 def create_centerline_street_lookup():
     path = csv_path('centerline_streets')
@@ -153,7 +153,6 @@ def create_centerline_street_lookup():
     f.close()
     return lookup, lookup_list, lookup_name, lookup_pre, lookup_suffix
 
-
 def create_full_names(address, addr_type):
     if addr_type == AddrType.opa_account or addr_type == AddrType.zipcode:
         return address
@@ -168,8 +167,6 @@ def create_full_names(address, addr_type):
         # no Range
         if address.address.low_num >= 0 > address.address.high_num:
             address.address.full = address.address.low
-            # if address.address.addr_suffix != '':
-            #    address.address.full = address.address.full+address.address.addr_suffix
             if address.address.fractional != '':
                 address.address.full = address.address.full + ' ' + address.address.fractional
 
@@ -183,11 +180,6 @@ def create_full_names(address, addr_type):
                 temp = '0' + str(temp_num)
             else:
                 temp = str(temp_num)
-            # if address.address.addr_suffix != '' and address.address.fractional != '':
-            #     address.address.full = address.address.low + address.address.addr_suffix + '-' + temp + ' ' +
-            # address.address.fractional
-            # elif address.address.addr_suffix != '':
-            #     address.address.full = address.address.low + address.address.addr_suffix + '-' + temp
             if address.address.fractional != '':
                 address.address.full = address.address.low + '-' + temp + ' ' + address.address.fractional
             else:
@@ -212,7 +204,6 @@ def create_full_names(address, addr_type):
         address.base_address = address.street.full
 
     return address
-
 
 def centerline_rematch(address):
     # If only street name provided and there is only one version of the full name...
@@ -263,9 +254,6 @@ def centerline_rematch(address):
             address.parse_method = 'CL_S'
             address.is_centerline_match = True
 
-            # street_centerline_lookup, street_centerline_name_lookup,name_lookup,pre_lookup,suffix_lookup
-
-
 # latlon wgs84  Lon -75.0 to - 74 Lat 39 to 40
 # state plane Y - 2,600,000 2,800,000  X - 200,000 to 320,000
 def xy_check(item):
@@ -294,10 +282,8 @@ def xy_check(item):
         return 'JUNK'
 
 def parse(item, MAX_RANGE):
-    # address = Addr()
     address_uber = AddressUber()
     address = address_uber.components
-    # latlon_search = latlon_re.search(item)
     item = '' if item == None else item
     is_xy = xy_check(item)
     if not is_xy:
@@ -305,8 +291,6 @@ def parse(item, MAX_RANGE):
 
     if item == '':
         address_uber.type = AddrType.none
-        # raise ValueError('Address not specified: {}'.format(item))
-        # return address_uber
 
     # if you get a 9 digit numeric, treat it as an OPA account
     opa_account_search = opa_account_re.search(item)
@@ -363,10 +347,6 @@ def parse(item, MAX_RANGE):
         address.street.name = 'PO BOX {}'.format(num)
 
     else:
-    #     if landmark_addr:
-    #         item = landmark_addr
-        #######################################################################################################################
-
         address = parse_addr_1(address, item)
         if address.street.parse_method == 'UNK':
             address_uber.type = AddrType.none
@@ -381,12 +361,6 @@ def parse(item, MAX_RANGE):
                 if address.street.name == '':
                     raise ValueError('Parsed address does not have a street name: {}'.format(item))
             elif address_uber.type != AddrType.block:
-                # if the users doesn't have the centerline file, parser will still work
-                # if is_cl_file:
-                #     get_cl_info(address, address_uber, MAX_RANGE)
-                    # if address_uber.type == 'intersection_addr':
-                    #     get_cl_info_street2(address)
-                # address_uber.type = AddrType.street
                 address_uber.type = AddrType.none
 
     if address.street.parse_method != 'cl_name_match':
@@ -456,8 +430,6 @@ def parse(item, MAX_RANGE):
             get_election_info(address_copy)
             address.election.blockid = address_copy.election.blockid
             address.election.precinct = address_copy.election.precinct
-        # if test_cl_file:
-        # get_cl_info(address, address_uber.input_address)
     if address_uber.components.address_unit.unit_type == '' and address_uber.components.address_unit.unit_num != '':
         address_uber.components.address_unit.unit_type = '#'
 
@@ -638,7 +610,6 @@ def input_cleanup(address_uber, item):
     if ' BLOCK ' in item or ' BLK ' in item:
         #  Parking data
         item = item.replace('UNIT BLK', '1 ')
-
         item = item.replace(' BLOCK OF ', ' ')
         item = item.replace(' BLOCK ', ' ')
         item = item.replace(' BLK OF ', ' ')
@@ -646,7 +617,6 @@ def input_cleanup(address_uber, item):
         address_uber.type = AddrType.block
 
     item = ' '.join(item.split())
-
     return item
 
 def check_version(): 
@@ -679,7 +649,10 @@ Run `pip install git+https://github.com/CityOfPhiladelphia/passyunk` to upgrade
 ''')
         else: 
             print(f'Current Passyunk Version: {current_version} is up-to-date')
-        
+    except Exception as e: 
+            logging.warning(f'Error when attempting to check public module version\nError Text: {e}')
+
+    if private_installed:         
         newest_version_private = version.find_newest(tags_private)
         try: 
             current_version_private = version.Version(metadata.version('passyunk_automation'))
@@ -693,12 +666,8 @@ from the same environment that the public passyunk module was installed in.
 ''')
             else: 
                 print(f'Current Passyunk Private Data Version: {current_version_private} is up-to-date')
-        except metadata.PackageNotFoundError: 
-            print('Unable to access private data - you may not have sufficient permissions or it is not installed in this environment')
         except Exception as e: 
             logging.warning(f'Error when attempting to check private module version\nError Text: {e}')
-    except Exception as e: 
-        logging.warning(f'Error when attempting to check public module version\nError Text: {e}')
 
 '''
 RUN
@@ -706,30 +675,26 @@ RUN
 
 cwd = os.path.dirname(__file__)
 cwd += '/pdata'
-# Get config
-# config_path = os.path.join(cwd, 'config.py')
-# return_dict = True if CONFIG['return_dict'] else False
-
 
 street_centerline_lookup, street_centerline_name_lookup, cl_name_lookup, cl_pre_lookup, \
 cl_suffix_lookup = create_centerline_street_lookup()
 
-# alias_centerline_lookup, alias_centerline_name_lookup, al_name_lookup, al_pre_lookup, \
-# al_suffix_lookup = create_centerline_alias_lookup()
-
 # if the user doesn't have the zip4 or centerline file, parser will still work
-is_zip_file = create_zip4_lookup()
-if not is_zip_file:
-    logging.warning('USPS file not found.')
+def warn_file(name: str, found: bool): 
+    if not found: 
+        logging.warning(f'{name} file not found')
+
 is_cl_file = create_cl_lookup()
-if not is_cl_file:
-    logging.warning('Centerline file not found.')
 is_al_file = create_al_lookup()
-if not is_al_file:
-    logging.warning('Alias file not found.')
-is_election_file = create_election_lookup()
-if not is_election_file:
-    logging.warning('Election file not found.')
+if private_installed: 
+    is_zip_file = create_zip4_lookup()
+    is_election_file = create_election_lookup()
+else: 
+    is_zip_file, is_election_file = False, False
+warn_file('Centerline', is_cl_file)
+warn_file('Alias', is_al_file)
+warn_file('USPS', is_zip_file)
+warn_file('Election', is_election_file)
 
 check_version()
 
@@ -746,7 +711,6 @@ class PassyunkParser:
 
         if self.return_dict:
             # Hack to make nested addrnum a dict as well
-            # parsed_out.components = parsed_out.components.__dict__
             parsed_out.components.mailing = parsed_out.components.mailing.__dict__
             parsed_out.components.election = parsed_out.components.election.__dict__
             parsed_out.components.address = parsed_out.components.address.__dict__
