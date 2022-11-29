@@ -1,5 +1,4 @@
 """
-
 Philadelphia Address Standardizer
 
 Author: Tom Swanson
@@ -8,7 +7,6 @@ Revisions: James Midkiff
 Created: 8/25/2014
 Last Updated: 2/9/2016
 Revised: 10/2022
-
 """
 
 from __future__ import absolute_import
@@ -22,15 +20,17 @@ from importlib import metadata
 import requests
 from copy import deepcopy
 
-from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2, create_al_lookup
+# Public Data
+from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2, create_al_lookup # centerline.csv, alias.csv - Public
 from .data import opa_account_re, zipcode_re, po_box_re, mapreg_re, AddrType, \
-    ILLEGAL_CHARS_RE
-from .election import create_election_lookup, get_election_info
+    ILLEGAL_CHARS_RE # suffix.csv - Public
 from .parser_addr import parse_addr_1, name_switch, is_centerline_street_name, is_centerline_street_pre, \
-    is_centerline_street_suffix, is_centerline_name, Address
-from .zip4 import create_zip4_lookup, get_zip_info
-from .landmark import Landmark
+    is_centerline_street_suffix, is_centerline_name, Address # suffix.csv, name_switch.csv, centerline_streets.csv, directional.csv, saint.csv, std.csv, apt.csv, apt_std.csv, apte.csv - Public
+from .landmark import Landmark # landmarks.csv - Public
 from .pdata import version
+# Private Data
+from passyunk_automation.zip4 import create_zip4_lookup, get_zip_info # usps_zip4s.csv - Private
+from passyunk_automation.election import create_election_lookup, get_election_info # election_block.csv - Private
 
 is_cl_file = False
 is_al_file = False
@@ -669,7 +669,7 @@ def check_version():
                         tags.append(s)
         
         newest_version = version.find_newest(tags)
-        current_version = version.Version(metadata.version('passyunk'))
+        current_version = version.Version(metadata.version('passyunk')) # metadata.version can get tripped up if you have a .egg-info directory lying around, so delete that directory if necessary
         if current_version < newest_version: 
             logging.warning(f'''
 There is a new version of the Passyunk module available with updated data. 
