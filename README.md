@@ -6,19 +6,17 @@ Address parser and standardizer for the City of Philadelphia
 ```
 pip install git+https://github.com/CityOfPhiladelphia/passyunk
 ```
+If you have been granted access to the private data files, you can install the `passyunk_automation` package at the same time by running 
+```
+pip install git+https://github.com/CityOfPhiladelphia/passyunk[private]
+```
+
 To find where passyunk is installed, from the command line run
 ```
 python
 import passyunk
 passyunk.__file__
 ```
-### passyunk_automation
-If you have been granted access to the private data files, install the `passyunk_automation` package with
-```
-pip install git+ssh://git@github.com/CityOfPhiladelphia/passyunk_automation.git -v
-```
-which will move the private data files into the `passyunk/pdata` folder. Note passyunk itself must already be installed and this command must be run from the same environment that passyunk itself was installed in (such as a virtual environment). 
-
 ## Usage
 
 ### Quickstart

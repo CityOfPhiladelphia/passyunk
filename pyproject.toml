@@ -22,10 +22,5 @@ dependencies = [
 [project.optional-dependencies] # Remove branch when ready
 private = ["passyunk_automation @ git+ssh://git@github.com/CityOfPhiladelphia/passyunk_automation.git@setuptools"]
 
-# [tool.setuptools.packages.find]
-# where = ["passyunk"] # Includes the private data, but excludes the scripts. 
-[tool.setuptools]
-packages = ["passyunk"]
-
 [tool.setuptools.package-data]
 "*" = ["*.csv"]

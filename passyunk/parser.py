@@ -10,7 +10,6 @@ Revised: 10/2022
 """
 
 from __future__ import absolute_import
-
 import csv
 import os
 import re
@@ -28,6 +27,7 @@ from .parser_addr import parse_addr_1, name_switch, is_centerline_street_name, i
     is_centerline_street_suffix, is_centerline_name, Address # suffix.csv, name_switch.csv, centerline_streets.csv, directional.csv, saint.csv, std.csv, apt.csv, apt_std.csv, apte.csv - Public
 from .landmark import Landmark # landmarks.csv - Public
 from .pdata import version
+
 # Private Data
 try: 
     from passyunk_automation.zip4 import create_zip4_lookup, get_zip_info # usps_zip4s.csv - Private
@@ -254,9 +254,9 @@ def centerline_rematch(address):
             address.parse_method = 'CL_S'
             address.is_centerline_match = True
 
-# latlon wgs84  Lon -75.0 to - 74 Lat 39 to 40
-# state plane Y - 2,600,000 2,800,000  X - 200,000 to 320,000
 def xy_check(item):
+    # latlon wgs84  Lon -75.0 to - 74 Lat 39 to 40
+    # state plane Y - 2,600,000 2,800,000  X - 200,000 to 320,000
     tmp = item.strip()
     tmp = tmp.replace('+', '')
     tmp = tmp.replace(',', ' ')
