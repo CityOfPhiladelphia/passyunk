@@ -20,7 +20,7 @@ dependencies = [
     ]
 
 [project.optional-dependencies] # Remove branch when ready
-private = ["passyunk_automation @ git+ssh://git@github.com/CityOfPhiladelphia/passyunk_automation.git@setuptools"]
+private = ["passyunk_automation @ git+ssh://git@github.com/CityOfPhiladelphia/passyunk_automation.git"]
 
 [tool.setuptools.package-data]
 "*" = ["*.csv"]
