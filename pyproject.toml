@@ -19,8 +19,10 @@ dependencies = [
     'requests>=2.28,<3.0'
     ]
 
-[project.optional-dependencies] # Remove branch when ready
+[project.optional-dependencies] 
 private = ["passyunk_automation @ git+ssh://git@github.com/CityOfPhiladelphia/passyunk_automation.git"]
+# The following syntax works: 
+# pip install "passyunk[private] @ git+https://github.com/CityOfPhiladelphia/passyunk@<branch>"
 
 [tool.setuptools.package-data]
 "*" = ["*.csv"]
