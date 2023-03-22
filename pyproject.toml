@@ -25,8 +25,11 @@ private = ["passyunk_automation @ git+ssh://git@github.com/CityOfPhiladelphia/pa
 # The following syntax works: 
 # pip install "passyunk[private] @ git+https://github.com/CityOfPhiladelphia/passyunk@<branch>"
 
-[tool.setuptools.package-data]
-"*" = ["*.csv"]
-
 [tool.setuptools]
 packages = ["passyunk"] # Successfully ignores virtual environment folders
+
+[tool.setuptools.passyunk.find]
+where = ["pdata"]
+
+[tool.setuptools.package-data]
+"*" = ["*.csv"]
