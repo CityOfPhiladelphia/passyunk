@@ -1,4 +1,6 @@
 import re
+from typing import Union, List
+Array = List[str]
 
 class Version: 
     '''
@@ -39,7 +41,7 @@ class Version:
             return m
     
     def create(self, 
-        major: int|str, minor: int|str, patch: int|str, 
+        major: Union[int, str], minor: Union[int, str], patch: Union[int, str], 
         prerelease: str, buildmetadata: str) -> 'Version': 
         '''
         Create a Version from components
@@ -109,7 +111,7 @@ class Version:
     def __repr__(self): 
         return self.version
 
-def find_newest(array: list[str]) -> 'Version': 
+def find_newest(array: Array) -> 'Version': 
     '''
     Return the newest Version out of an array of elements coercible to Versions, 
     ignoring prerelease and buildmetadata

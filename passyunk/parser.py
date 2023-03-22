@@ -15,7 +15,7 @@ import os
 import re
 import sys
 import logging
-from importlib import metadata
+import importlib_metadata
 import requests
 from copy import deepcopy
 
@@ -639,7 +639,7 @@ def check_version():
                         tags.append(s)
         
         newest_version = version.find_newest(tags)
-        current_version = version.Version(metadata.version('passyunk')) # metadata.version can get tripped up if you have a .egg-info directory lying around, so delete that directory if necessary
+        current_version = version.Version(importlib_metadata.version('passyunk'))
         if current_version < newest_version: 
             logging.warning(f'''
 There is a new version of the Passyunk module available with updated data. 
@@ -655,7 +655,7 @@ Run `pip install git+https://github.com/CityOfPhiladelphia/passyunk` to upgrade
     if private_installed:         
         newest_version_private = version.find_newest(tags_private)
         try: 
-            current_version_private = version.Version(metadata.version('passyunk_automation'))
+            current_version_private = version.Version(importlib_metadata.version('passyunk_automation'))
             if current_version_private < newest_version_private: 
                 logging.warning(f'''
 There is a new version of the private Passyunk module available with updated data. 

@@ -5,14 +5,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "passyunk"
-version = "2.4.0"
+version = "2.4.1"
 description = "Address parser for City of Philadelphia addresses"
 readme = "README.md"
 authors = [
     {name = "Tom Swanson"},
     {name = "James Midkiff", email = "james.midkiff@phila.gov"}
     ]
-requires-python = ">=3.6"
+requires-python = ">=3.7"
 dependencies = [
     'fuzzywuzzy>=0.11.1,<1.0',
     'Levenshtein>=0.20,<1.0',
@@ -26,3 +26,6 @@ private = ["passyunk_automation @ git+ssh://git@github.com/CityOfPhiladelphia/pa
 
 [tool.setuptools.package-data]
 "*" = ["*.csv"]
+
+[tool.setuptools]
+packages = ["passyunk"] # Successfully ignores virtual environment folders
