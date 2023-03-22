@@ -26,7 +26,7 @@ private = ["passyunk_automation @ git+ssh://git@github.com/CityOfPhiladelphia/pa
 # pip install "passyunk[private] @ git+https://github.com/CityOfPhiladelphia/passyunk@<branch>"
 
 [tool.setuptools.packages.find]
-include = ["passyunk"] 
+include = ["passyunk", "passyunk.pdata"] 
 
 [tool.setuptools.package-data]
 "*" = ["*.csv"]
