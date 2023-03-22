@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "passyunk"
-version = "2.4.2"
+version = "2.4.3"
 description = "Address parser for City of Philadelphia addresses"
 readme = "README.md"
 authors = [
@@ -25,11 +25,8 @@ private = ["passyunk_automation @ git+ssh://git@github.com/CityOfPhiladelphia/pa
 # The following syntax works: 
 # pip install "passyunk[private] @ git+https://github.com/CityOfPhiladelphia/passyunk@<branch>"
 
-[tool.setuptools]
-packages = ["passyunk"] # Successfully ignores virtual environment folders
-
-[tool.setuptools.passyunk.find]
-where = ["pdata"]
+[tool.setuptools.packages.find]
+include = ["passyunk"] 
 
 [tool.setuptools.package-data]
 "*" = ["*.csv"]
