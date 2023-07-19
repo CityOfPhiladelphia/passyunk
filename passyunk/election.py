@@ -23,13 +23,15 @@ election_name = {}
 
 class Blocks:
     def __init__(self, row):
+        # print(row)
+        # print(row[6])
         self.base = row[0]
         self.pre = row[1]
         self.name = row[2]
         self.suffix = row[3]
         self.post = row[4]
         self.low = int(row[5]) if len(row[5].strip()) > 0 else 0
-        self.high = int(row[6]) if len(row[5].strip()) > 0 else 0
+        self.high = int(row[6]) if len(row[6].strip()) > 0 else 0
         self.oeb = row[7]
         self.blockid = row[8]
         self.usage = row[9]
