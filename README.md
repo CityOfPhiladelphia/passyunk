@@ -8,7 +8,7 @@ pip install git+https://github.com/CityOfPhiladelphia/passyunk
 ```
 If you have been granted access to the private data files, you can install the `passyunk_automation` package at the same time by running 
 ```
-pip install git+https://github.com/CityOfPhiladelphia/passyunk[private]
+pip install passyunk[private] @ git+https://github.com/CityOfPhiladelphia/passyunk
 ```
 
 To find where passyunk is installed, from the command line run
