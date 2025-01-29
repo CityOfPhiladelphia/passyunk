@@ -75,6 +75,12 @@ class Address:
         return self.__str__()
 
 
+class Floor:
+    def __init__(self):
+        self.floor_num = ''
+        self.floor_type = ''
+
+
 class Unit:
     def __init__(self):
         self.unit_num = ''
@@ -1506,7 +1512,7 @@ def parse_addr_1(address, item):
     units = handle_units(tokens, address.address_unit)
 
     if units[0] != -1 and address.address_unit.unit_type == '':
-        tokens = unitdesigantor_second_pass(address, units, tokens)
+        tokens = unitdesignator_second_pass(address, units, tokens)
 
     # there isn't a street name, this is junk but put the unit back in the street name
     if len(tokens) == 0 and (address.address_unit.unit_num != '' or address.address_unit.unit_type != ''):
@@ -2040,7 +2046,7 @@ def parse_addr_1(address, item):
     return address
 
 
-def unitdesigantor_second_pass(address, apt, tokens):
+def unitdesignator_second_pass(address, apt, tokens):
     address.address_unit.unit_type = apt[1]
     tokens = tokens[0:apt[0]]
     aptsplit = address.address_unit.unit_type.split(' ')
