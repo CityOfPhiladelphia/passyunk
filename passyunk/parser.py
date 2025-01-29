@@ -545,6 +545,14 @@ def parse(item, MAX_RANGE):
     if address_uber.components.election.precinct == '':
         address_uber.components.election.precinct = None
 
+    # modeled on address_uber.components.address_unit.unit_num stuff below - Jan. 2025, MJ
+    if address_uber.components.floor.floor_num == '':
+        address_uber.components.floor.floor_num = None
+    if address_uber.components.floor.floor_num == -1:
+        address_uber.components.floor.floor_num = None
+    if address_uber.components.floor.floor_type == '':
+        address_uber.components.floor.floor_type = None
+
     # since there aren't set values that are valid for these fields, long strings of junk valuse can come through
     # 6252 N. 4TH ST. 19120DFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFBBBBBBB B
     if address_uber.components.address_unit.unit_num != -1 and len(address_uber.components.address_unit.unit_num) > 12:
@@ -716,6 +724,8 @@ class PassyunkParser:
             parsed_out.components.address = parsed_out.components.address.__dict__
             parsed_out.components.street = parsed_out.components.street.__dict__
             parsed_out.components.street_2 = parsed_out.components.street_2.__dict__
+            # TODO: adding this creates this warning in pytests: "...parser.py:636: DeprecationWarning: invalid escape sequence \+". why??
+            parsed_out.components.floor = parsed_out.components.floor.__dict__ 
             parsed_out.components.address_unit = parsed_out.components.address_unit.__dict__
             parsed_out.components = parsed_out.components.__dict__
             return parsed_out.__dict__
