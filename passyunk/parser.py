@@ -553,7 +553,7 @@ def parse(item, MAX_RANGE):
     if address_uber.components.floor.floor_type == '':
         address_uber.components.floor.floor_type = None
 
-    # since there aren't set values that are valid for these fields, long strings of junk valuse can come through
+    # since there aren't set values that are valid for these fields, long strings of junk values can come through
     # 6252 N. 4TH ST. 19120DFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFBBBBBBB B
     if address_uber.components.address_unit.unit_num != -1 and len(address_uber.components.address_unit.unit_num) > 12:
         address_uber.components.address_unit.unit_num = address_uber.components.address_unit.unit_num[:12]
@@ -589,7 +589,8 @@ def input_cleanup(address_uber, item):
 
     items = item.split('#')
     if len(items) > 2:
-        item = "{} # {}".format(items[0], items[2])
+        # item = "{} # {}".format(items[0], items[2]) # OLD
+        item = "#".join(items) # allow for more than one # within address, e.g. '1234 MARKET STREET FLOOR # 15 UNIT # 6'
 
     # get rid of trailing #  1608 South St #
     if len(items) == 2 and items[1] == '':
@@ -603,6 +604,7 @@ def input_cleanup(address_uber, item):
     item = item.replace('@', ' AND ')
     item = item.replace(' AT ', ' AND ')
     item = item.replace(' UNIT UNIT', ' UNIT ')  # yes this is common
+    item = item.replace(' LBBY LBBY', ' LBBY ') # having more than one Apte causes TypeError
     item = item.replace('1 AND 2', ' 1/2 ')
     item = item.replace(' - ', '-')
     item = item.replace(' -', '-')

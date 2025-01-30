@@ -35,7 +35,7 @@ with open(os.path.join(os.path.dirname(__file__), 'pdata/suffix.csv')) as f:
         std = cols[2]
         SUFFIXES_STD[common] = std
 
-aptfloor = ['FL', 'FLR', 'FLOOR']
+APTFLOOR = ['FL', 'FLR', 'FLOOR']
 CONJUNCTIONS = ['AND', '@', '\\', 'AT', '&']
 STATELIST = ['PA', 'PENNSYLVANIA']
 CITYLIST = ['PHILADELPHIA', 'PHILA', 'PHILLY', 'PHILADELPHA', 'PHILADELPHIA', 'PHILADELHIA', 'PHIALDELPHIA',

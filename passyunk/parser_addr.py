@@ -7,7 +7,8 @@ import sys
 
 from .data import opa_account_re, zipcode_re, STATELIST, CITYLIST, CARDINAL_DIR, PREPOSTDIR, POSTDIR, \
     PREDIR_AS_NAME, \
-    SUFFIX_IN_NAME
+    SUFFIX_IN_NAME, \
+    APTFLOOR
 
 is_cl_file = False
 is_al_file = False
@@ -289,7 +290,7 @@ def create_centerline_street_lookup():
     return lookup, lookup_list, lookup_name, lookup_pre, lookup_suffix
 
 
-def createdirlookup():
+def create_dir_lookup():
     path = csv_path('directional')
     f = open(path, 'r')
     lookup = {}
@@ -335,7 +336,7 @@ def create_ordinal_lookup():
     return lookup
 
 
-def createsaintlookup():
+def create_saint_lookup():
     path = csv_path('saint')
     f = open(path, 'r')
     lookup = {}
@@ -350,7 +351,7 @@ def createsaintlookup():
     return lookup
 
 
-def createnamestdlookup():
+def create_namestd_lookup():
     path = csv_path('std')
     f = open(path, 'r')
     lookup = {}
@@ -365,7 +366,7 @@ def createnamestdlookup():
     return lookup
 
 
-def createaptlookup():
+def create_apt_lookup():
     path = csv_path('apt')
     f = open(path, 'r')
     lookup = {}
@@ -380,7 +381,7 @@ def createaptlookup():
     return lookup
 
 
-def createaptstdlookup():
+def create_aptstd_lookup():
     path = csv_path('apt_std')
     f = open(path, 'r')
     lookup = {}
@@ -395,7 +396,7 @@ def createaptstdlookup():
     return lookup
 
 
-def createaptelookup():
+def create_apte_lookup():
     path = csv_path('apte')
     f = open(path, 'r')
     lookup = {}
@@ -483,7 +484,7 @@ def is_dir(test):
     # 2 - long dir NORTH,EAST,SOUTH,WEST
 
     try:
-        d = dirLookup[test]
+        d = dir_lookup[test]
     except KeyError:
         row = [' ', test, ' ']
         d = Directional(row)
@@ -495,7 +496,7 @@ def is_dir(test):
 def is_saint(test):
     ret = True
     try:
-        saintLookup[test]
+        saint_lookup[test]
     except KeyError:
         ret = False
 
@@ -504,7 +505,7 @@ def is_saint(test):
 
 def is_name_std(test):
     try:
-        nstd = nameStdLookup[test]
+        nstd = namestd_lookup[test]
     except KeyError:
         row = ['', test]
         nstd = Namestd(row)
@@ -514,7 +515,7 @@ def is_name_std(test):
 
 def is_apt(test):
     try:
-        apttemp = aptLookup[test]
+        apttemp = apt_lookup[test]
     except KeyError:
         row = ['', test]
         apttemp = Apt(row)
@@ -524,7 +525,7 @@ def is_apt(test):
 
 def is_apt_std(test):
     try:
-        apttemp = aptStdLookup[test]
+        apttemp = aptstd_lookup[test]
     except KeyError:
         return ''
 
@@ -533,7 +534,7 @@ def is_apt_std(test):
 
 def is_apte(test):
     try:
-        aptetemp = apteLookup[test]
+        aptetemp = apte_lookup[test]
     except KeyError:
         row = ['', test]
         aptetemp = Apte(row)
@@ -832,7 +833,7 @@ def handle_units(tokens, unit):
     if tlen > 2:
         addrn = is_addr(tokens[tlen - 1], 2)
         apt = is_apt(tokens[tlen - 2])
-        # tempDir1 = isDir(tokens[tlen-2],dirLookup)
+        # tempDir1 = isDir(tokens[tlen-2],dir_lookup)
         # tempsuffix1 = isSuffix(tokens[tlen-2],suffixLookup)
 
         if addrn.isaddr and apt.correct != '':
@@ -1386,6 +1387,72 @@ def name_switch(address):
         address.street.name = nameswitch.name
         address.street.suffix = nameswitch.suffix
         address.street.postdir = nameswitch.post
+
+
+def split_lead_numbers_from_alpha_string(item):
+    item = item.replace(',', ' ')
+    tokens = item.split()
+
+    # 3101 - 3199 S 3RD ST
+    # Not allowing spaces around '-' instead.  see input_cleanup()
+    # if len(tokens)>4 and tokens[1] == '-':
+    #     tokens[0] += '-'+tokens[2]
+    #     tokens.pop(1)
+    #     tokens.pop(1)
+
+    i = 0
+    for token in tokens:
+        if len(token) > 30:
+            del tokens[i]
+        i += 1
+
+    if len(tokens) == 0:
+        return tokens
+    if len(tokens) == 1 and len(tokens[0]) < 4:
+        return tokens
+
+    pre_dir = is_dir(tokens[0])
+
+    # northeast ave
+    suffix = issuffix('')
+    if len(tokens) > 1:
+        suffix = issuffix(tokens[1])
+    # this line has to sync with the same one below
+    if len(tokens) >= 1 and pre_dir.std != '0' and suffix.std == '0':
+        del tokens[0]
+
+    lead_string = ''
+    trail_string = ''
+    alpha = False
+    if len(tokens) == 0:
+        if pre_dir.std != 0 and suffix.std == '0':
+            tokens.insert(0, pre_dir.full)
+            return tokens
+        if pre_dir.std == 0 and suffix.std != '0':
+            tokens.insert(0, suffix.full)
+            return tokens
+        if pre_dir.std != 0 and suffix.std != '0':
+            tokens.insert(0, pre_dir.correct)
+            tokens.insert(0, suffix.full)
+            return tokens
+    # does the leading token start with a num and end with a char, making sure to not confuse numeric streets and addresses with suffix chars
+    if (len(tokens) > 1 or len(tokens[0]) > 7) and tokens[0].isalnum() and tokens[0][0].isdigit() and tokens[0][
+                len(tokens[0]) - 1].isalpha():
+
+        for c in tokens[0]:
+            if alpha or c.isalpha():
+                alpha = True
+                trail_string += c
+            else:
+                lead_string += c
+
+        if len(lead_string) > 2 and len(trail_string) > 3 or (len(trail_string) > 4):
+            tokens.insert(0, lead_string)
+            tokens[1] = trail_string
+    if len(tokens) >= 1 and pre_dir.std != '0' and suffix.std == '0':
+        tokens.insert(0, pre_dir.correct)
+
+    return tokens
 
 
 def parse_addr_1(address, item):
@@ -2087,79 +2154,13 @@ cwd += '/pdata'
 # return_dict = True if CONFIG['return_dict'] else False
 
 suffix_lookup = create_suffix_lookup()
-dirLookup = createdirlookup()
-saintLookup = createsaintlookup()
-nameStdLookup = createnamestdlookup()
-aptLookup = createaptlookup()
-apteLookup = createaptelookup()
-aptStdLookup = createaptstdlookup()
+dir_lookup = create_dir_lookup()
+saint_lookup = create_saint_lookup()
+namestd_lookup = create_namestd_lookup()
+apt_lookup = create_apt_lookup()
+apte_lookup = create_apte_lookup()
+aptstd_lookup = create_aptstd_lookup()
 add_ordinal_lookup = create_ordinal_lookup()
 name_switch_lookup = create_name_switch_lookup()
 street_centerline_lookup, street_centerline_name_lookup, cl_name_lookup, cl_pre_lookup, \
 cl_suffix_lookup = create_centerline_street_lookup()
-
-
-def split_lead_numbers_from_alpha_string(item):
-    item = item.replace(',', ' ')
-    tokens = item.split()
-
-    # 3101 - 3199 S 3RD ST
-    # Not allowing spaces around '-' instead.  see input_cleanup()
-    # if len(tokens)>4 and tokens[1] == '-':
-    #     tokens[0] += '-'+tokens[2]
-    #     tokens.pop(1)
-    #     tokens.pop(1)
-
-    i = 0
-    for token in tokens:
-        if len(token) > 30:
-            del tokens[i]
-        i += 1
-
-    if len(tokens) == 0:
-        return tokens
-    if len(tokens) == 1 and len(tokens[0]) < 4:
-        return tokens
-
-    pre_dir = is_dir(tokens[0])
-
-    # northeast ave
-    suffix = issuffix('')
-    if len(tokens) > 1:
-        suffix = issuffix(tokens[1])
-    # this line has to sync with the same one below
-    if len(tokens) >= 1 and pre_dir.std != '0' and suffix.std == '0':
-        del tokens[0]
-
-    lead_string = ''
-    trail_string = ''
-    alpha = False
-    if len(tokens) == 0:
-        if pre_dir.std != 0 and suffix.std == '0':
-            tokens.insert(0, pre_dir.full)
-            return tokens
-        if pre_dir.std == 0 and suffix.std != '0':
-            tokens.insert(0, suffix.full)
-            return tokens
-        if pre_dir.std != 0 and suffix.std != '0':
-            tokens.insert(0, pre_dir.correct)
-            tokens.insert(0, suffix.full)
-            return tokens
-    # is the leading token start with a num and end with a char, making sure to not confuse numberic streets and address with suffix chars
-    if (len(tokens) > 1 or len(tokens[0]) > 7) and tokens[0].isalnum() and tokens[0][0].isdigit() and tokens[0][
-                len(tokens[0]) - 1].isalpha():
-
-        for c in tokens[0]:
-            if alpha or c.isalpha():
-                alpha = True
-                trail_string += c
-            else:
-                lead_string += c
-
-        if len(lead_string) > 2 and len(trail_string) > 3 or (len(trail_string) > 4):
-            tokens.insert(0, lead_string)
-            tokens[1] = trail_string
-    if len(tokens) >= 1 and pre_dir.std != '0' and suffix.std == '0':
-        tokens.insert(0, pre_dir.correct)
-
-    return tokens
