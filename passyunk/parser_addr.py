@@ -75,7 +75,7 @@ class Address:
 
 class Floor:
     def __init__(self):
-        self.floor_num = ''
+        self.floor_num = '' # could just start as -1
         self.floor_type = ''
 
 
@@ -587,24 +587,24 @@ def handle_st(tokens):
 def handle_city_state_zip(tokens):
     tlen = len(tokens)
 
-    if tokens[tlen - 1] == 'USA':
+    if tokens[-1] == 'USA':
         tokens.pop()
 
-    if tlen > 2 and tokens[tlen - 2] == 'UNITED' and tokens[tlen - 1] == 'STATES':
+    if tlen > 2 and tokens[-2] == 'UNITED' and tokens[-1] == 'STATES':
         tokens.pop()
         tokens.pop()
 
     zipcode = ''
     tlen = len(tokens)
     # check for a valid Philadelphia zipcode
-    ziptest = tokens[tlen - 1]
+    ziptest = tokens[-1]
 
     if zipcode_re.match(ziptest) is not None:
         ack = ziptest.split('-')
 
         if len(ack) == 1:
             # need to handle 5311 FLORENCE AVE UNIT 19112
-            if 19000 < int(ack[0]) < 19300 and tokens[tlen - 2] != 'UNIT':
+            if 19000 < int(ack[0]) < 19300 and tokens[-2] != 'UNIT':
                 zipcode = ziptest
                 tokens.remove(ziptest)
         elif len(ack) == 2:
@@ -617,9 +617,9 @@ def handle_city_state_zip(tokens):
             raise ValueError('Unknown zip4 pattern: {}'.format(ziptest))
 
     tlen = len(tokens)
-    if tlen > 3 and tokens[tlen - 1].isdigit() and tokens[tlen - 2].isdigit():
-        if 19000 < int(tokens[tlen - 2]) < 19300 and 1000 < int(tokens[tlen - 1]) < 9999:
-            zipcode = tokens[tlen - 2]
+    if tlen > 3 and tokens[-1].isdigit() and tokens[-2].isdigit():
+        if 19000 < int(tokens[-2]) < 19300 and 1000 < int(tokens[-1]) < 9999:
+            zipcode = tokens[-2]
             tokens.pop()
             tokens.pop()
 
@@ -632,17 +632,16 @@ def handle_city_state_zip(tokens):
     tlen = len(tokens)
     if tlen == 0:
         return ''
-    statetest = tokens[tlen - 1]
+    statetest = tokens[-1]
 
     # Just make sure that a UNIT of  # PA is not treated as a state.  1010 RACE ST # PA
-    if tlen > 2 and statetest in STATELIST and tokens[tlen - 2] != '#' and tokens[tlen - 2] != 'APT' and tokens[
-                tlen - 2] != 'UNIT':
+    if tlen > 2 and statetest in STATELIST and tokens[-2] != '#' and tokens[-2] != 'APT' and tokens[-2] != 'UNIT':
         tokens.remove(statetest)
     tlen = len(tokens)
-    citytest = tokens[tlen - 1]
+    citytest = tokens[-1]
     if tlen >= 2 and citytest in CITYLIST:
         tokens.remove(citytest)
-    if len(tokens) >= 2 and tokens[len(tokens) - 1][0:5] == 'PA191':
+    if len(tokens) >= 2 and tokens[-1][0:5] == 'PA191':
         tokens.pop()
     return zipcode
 
@@ -654,8 +653,8 @@ def handle_units(tokens, unit):
 
     if tlen > 3:
 
-        if tokens[len(tokens) - 2] == '#':
-            aptstd = is_apt_std(tokens[len(tokens) - 1])
+        if tokens[-2] == '#':
+            aptstd = is_apt_std(tokens[-1])
             if aptstd == '1ST':
                 aptstd = 'FL 1'
             if aptstd == '2ND':
@@ -681,7 +680,7 @@ def handle_units(tokens, unit):
                         unit.unit_type = '#'
                         unit.unit_num = aptstd
             else:
-                unit.unit_num = tokens[len(tokens) - 1]
+                unit.unit_num = tokens[-1]
                 unit.unit_type = '#'
             tokens.pop()
             tokens.pop()
@@ -691,8 +690,8 @@ def handle_units(tokens, unit):
                 unit.unit_num = ''
             return [-1, '']
 
-        if tokens[len(tokens) - 3] == '#':
-            apttest = tokens[len(tokens) - 2] + ' ' + tokens[len(tokens) - 1]
+        if tokens[-3] == '#':
+            apttest = tokens[-2] + ' ' + tokens[-1]
             aptstd = is_apt_std(apttest)
 
             if aptstd:
@@ -722,16 +721,16 @@ def handle_units(tokens, unit):
             tokens.pop()
             return [-1, '']
 
-        apt = is_apt(tokens[len(tokens) - 2])
-        dig = tokens[len(tokens) - 1].isdigit()
+        apt = is_apt(tokens[-2])
+        dig = tokens[-1].isdigit()
         if dig and apt.correct != '':
-            unit.unit_num = str(int(tokens[len(tokens) - 1]))  # get rid of leading zeros
+            unit.unit_num = str(int(tokens[-1]))  # get rid of leading zeros
             unit.unit_type = apt.correct
             tokens.pop()
             tokens.pop()
             return [-1, '']
 
-        aptstd = is_apt_std(tokens[len(tokens) - 1])
+        aptstd = is_apt_std(tokens[-1])
         if aptstd and apt.correct != '':
             unit.unit_num = aptstd
             unit.unit_type = apt.correct
@@ -739,15 +738,15 @@ def handle_units(tokens, unit):
             tokens.pop()
             return [-1, '']
 
-        if apt.correct != '' and len(tokens[len(tokens) - 1]) <= 2:
-            unit.unit_num = tokens[len(tokens) - 1]
+        if apt.correct != '' and len(tokens[-1]) <= 2:
+            unit.unit_num = tokens[-1]
             unit.unit_type = apt.correct
             tokens.pop()
             tokens.pop()
             return [-1, '']
 
-        if tokens[len(tokens) - 2] == '#':
-            unit.unit_num = tokens[len(tokens) - 1]
+        if tokens[-2] == '#':
+            unit.unit_num = tokens[-1]
             unit.unit_type = '#'
             tokens.pop()
             tokens.pop()
@@ -761,18 +760,18 @@ def handle_units(tokens, unit):
         if aptstd:
             temp = aptstd.split()
             if len(temp) == 2:
-                tokens[tlen - 2] = temp[0]
-                tokens[tlen - 1] = temp[1]
+                tokens[-2] = temp[0]
+                tokens[-1] = temp[1]
             else:
-                tokens[tlen - 2] = temp[0]
+                tokens[-2] = temp[0]
                 tokens.pop()
             # The units were standardized so run again. Watch out for endless loop
             return handle_units(tokens, unit)
 
     # now lets try the last token
     if tlen > 2:
-        if tokens[len(tokens) - 2] == '#':
-            unit.unit_num = tokens[len(tokens) - 1]
+        if tokens[-2] == '#':
+            unit.unit_num = tokens[-1]
             unit.unit_type = '#'
             tokens.pop()
             tokens.pop()
@@ -783,15 +782,15 @@ def handle_units(tokens, unit):
         if aptstd:
             temp = aptstd.split()
             if len(temp) == 1:
-                tokens[tlen - 1] = aptstd
+                tokens[-1] = aptstd
             else:
-                tokens[tlen - 1] = temp[0]
+                tokens[-1] = temp[0]
                 lst = [temp[1]]
                 tokens.extend(lst)
                 tlen = len(tokens)
 
     # 1600 N SR 50 60 - junk
-    if len(tokens) > 3 and tokens[len(tokens) - 1].isdigit() and tokens[len(tokens) - 1].isdigit():
+    if len(tokens) > 3 and tokens[-1].isdigit() and tokens[-1].isdigit():
         return [-1, '']
 
     # if you get to this point and there is a #, everything after is the unit
@@ -807,9 +806,9 @@ def handle_units(tokens, unit):
 
     # 399 E UPSAL ST APT
     if len(tokens) > 3:
-        apt = is_apt(tokens[len(tokens) - 1])
-        apte = is_apte(tokens[len(tokens) - 1])
-        suff = issuffix(tokens[len(tokens) - 2])
+        apt = is_apt(tokens[-1])
+        apte = is_apte(tokens[-1])
+        suff = issuffix(tokens[-2])
 
         if apte.correct != '':
             return [len(tokens) - 1, apte.correct]
@@ -831,10 +830,10 @@ def handle_units(tokens, unit):
         i += 1
 
     if tlen > 2:
-        addrn = is_addr(tokens[tlen - 1], 2)
-        apt = is_apt(tokens[tlen - 2])
-        # tempDir1 = isDir(tokens[tlen-2],dir_lookup)
-        # tempsuffix1 = isSuffix(tokens[tlen-2],suffixLookup)
+        addrn = is_addr(tokens[-1], 2)
+        apt = is_apt(tokens[-2])
+        # tempDir1 = isDir(tokens[-2],dir_lookup)
+        # tempsuffix1 = isSuffix(tokens[-2],suffixLookup)
 
         if addrn.isaddr and apt.correct != '':
             return [tlen - 2, apt.correct + ' ' + addrn.low]
@@ -842,15 +841,15 @@ def handle_units(tokens, unit):
             return [tlen - 1, addrn.low]
 
     if tlen > 2:
-        apt = is_apte(tokens[tlen - 1])
-        tempsuffix1 = issuffix(tokens[tlen - 2])
+        apt = is_apte(tokens[-1])
+        tempsuffix1 = issuffix(tokens[-2])
 
         if apt.correct != '' and tempsuffix1.std != '0':
             return [tlen - 1, apt.correct]
 
     # 2024 ORTHODOX REAR
     if tlen == 2:
-        apt = is_apte(tokens[tlen - 1])
+        apt = is_apte(tokens[-1])
         direction = is_dir(tokens[0])
         if apt.correct != '' and direction.std == '0':
             return [tlen - 1, apt.correct]
@@ -1289,21 +1288,21 @@ def is_addr(test, ver):
             return addr_ret
 
     # UU-NN
-    if tokenlen > 2 and tokens[tokenlen - 2] == '-' and tokens[tokenlen - 1].isdigit():
-        if int(tokens[tokenlen - 1]) % 2 == 0:
+    if tokenlen > 2 and tokens[-2] == '-' and tokens[-1].isdigit():
+        if int(tokens[-1]) % 2 == 0:
             addr_ret.parity = 'E'
         else:
             addr_ret.parity = 'O'
         # if half:
         #     tokens.append(' 1/2')
-        addr_ret.low_num = int(tokens[tokenlen - 1])
+        addr_ret.low_num = int(tokens[-1])
         addr_ret.high_num = -1
         addr_ret.low = ''.join(tokens)
         addr_ret.high = ''
         addr_ret.addrnum_type = 'UU-NN'
         addr_ret.isaddr = True
     # NN-UU
-    if tokenlen > 2 and tokens[tokenlen - 2] == '-' and tokens[tokenlen - 1].isalpha() and tokens[0].isdigit():
+    if tokenlen > 2 and tokens[-2] == '-' and tokens[-1].isalpha() and tokens[0].isdigit():
         if int(tokens[0]) % 2 == 0:
             addr_ret.parity = 'E'
         else:
@@ -1473,15 +1472,18 @@ def parse_addr_1(address, item):
                                                             tokens[1] == 'OPPS' or
                                                             tokens[1] == 'OPT'):
         tokens.pop(0)
+
+    # TODO: rearrange "1234 MARKET ST UNIT 6 FLOOR 15" e.g. to "1234 MARKET ST FLOOR 15 UNIT 6"
+    
     # 1600 John F kennedy bl
     # Need a better solution
     if len(tokens) > 3 and len(tokens) < 6 \
-            and tokens[0].isdigit() and tokens[len(tokens) - 1] == 'BL':
-        tokens[len(tokens) - 1] = 'BLVD'
+            and tokens[0].isdigit() and tokens[-1] == 'BL':
+        tokens[-1] = 'BLVD'
 
     # 1600 John F kennedy bl, 19122
-    if len(tokens) > 4 and len(tokens) < 7 and tokens[0].isdigit() and tokens[len(tokens) - 2] == 'BL':
-        tokens[len(tokens) - 2] = 'BLVD'
+    if len(tokens) > 4 and len(tokens) < 7 and tokens[0].isdigit() and tokens[-2] == 'BL':
+        tokens[-2] = 'BLVD'
 
     if len(tokens) == 0:
         return address
@@ -1605,7 +1607,7 @@ def parse_addr_1(address, item):
         return address
 
     # dash char might slip through, get rid of it
-    if tokens[len(tokens) - 1] == '-':
+    if tokens[-1] == '-':
         tokens.pop()
     token_len = len(tokens)
     if token_len == 0:
@@ -1835,7 +1837,7 @@ def parse_addr_1(address, item):
             address.street.predir = pre_dir.correct
             address.street.name = ' '.join(name_std(tokens[1:2], True))
             address.street.suffix = suffix_minus_one.correct
-            apt_std = is_apt_std(tokens[token_len - 1])
+            apt_std = is_apt_std(tokens[-1])
             # Might need to handle the postdir streets here
             if post_dir.std != 0 and len(post_dir.common) == 1 and address.address_unit.unit_num == '':
                 if post_dir.full == pre_dir.full:
@@ -1881,7 +1883,7 @@ def parse_addr_1(address, item):
             address.street.name = ' '.join(name_std(tokens[0:2], True))
             address.street.suffix = suffix_minus_one.correct
             address.street.postdir = ''
-            address.address_unit.unit_type = is_apt_std(tokens[token_len - 1])
+            address.address_unit.unit_type = is_apt_std(tokens[-1])
             address.street.parse_method = '4NNSU'
             return address
 
@@ -1910,9 +1912,9 @@ def parse_addr_1(address, item):
 
     if 5 <= len(tokens) < 7:
         pre_dir = is_dir(tokens[0])
-        post_dir = is_dir(tokens[token_len - 1])
-        suffix_minus_one = issuffix(tokens[token_len - 2])
-        suffix_end = issuffix(tokens[token_len - 1])
+        post_dir = is_dir(tokens[-1])
+        suffix_minus_one = issuffix(tokens[-2])
+        suffix_end = issuffix(tokens[-1])
 
         # Streets with 3 or more words/tokens
         # AVENUE OF THE REPUBLIC - no suffix
@@ -1941,7 +1943,7 @@ def parse_addr_1(address, item):
             address.address = addrn
             address.street.predir = pre_dir.correct
             # special case OPS address 7 N CHRIS COLUMBUS BLVD PARK
-            if tokens[token_len - 1] == 'PARK':
+            if tokens[-1] == 'PARK':
                 address.address_unit.unit_type = 'PARK'
                 address.street.name = ' '.join(name_std(tokens[1:-2], True))
                 address.street.suffix = suffix_minus_one.correct
@@ -1960,7 +1962,7 @@ def parse_addr_1(address, item):
             if address.street.name != 'AVENUE OF THE REPUBLIC':
                 address.street.suffix = suffix_end.correct
             address.street.postdir = ''
-            address.address_unit.unit_type = is_apt_std(tokens[token_len - 1])
+            address.address_unit.unit_type = is_apt_std(tokens[-1])
 
             address.street.parse_method = '5NNNSU'
             return address
@@ -2002,7 +2004,7 @@ def parse_addr_1(address, item):
             address.street.name = ' '.join(name_std(tokens[0:1], True))
             address.street.suffix = suffix_minus_one.correct
             address.street.postdir = ''
-            apte_std = is_apte(tokens[token_len - 1])
+            apte_std = is_apte(tokens[-1])
             if apte_std.correct != '':
                 address.address_unit.unit_type = apte_std
                 # address.address_unit.unit_type = '#'
@@ -2033,8 +2035,8 @@ def parse_addr_1(address, item):
     # There's junk
     if token_len > 4:
         pre_dir = is_dir(tokens[0])
-        suffix_minus_one = issuffix(tokens[len(tokens) - 2])
-        suffix_end = issuffix(tokens[len(tokens) - 1])
+        suffix_minus_one = issuffix(tokens[-2])
+        suffix_end = issuffix(tokens[-1])
 
         # predir name suffix junk
         if pre_dir.std != '0' and suffix_minus_one.std == '1':

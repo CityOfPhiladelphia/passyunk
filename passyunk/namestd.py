@@ -27,7 +27,7 @@ class StandardName:
         return os.path.join(cwd, file_name + '.csv')
 
     # This is run on parser initialization and imported above as namestd_lookup
-    def createnamestdlookup(self):
+    def create_namestd_lookup(self):
         path = self.csv_path('std')
         with open(path, 'r') as f:
             lookup = {}
