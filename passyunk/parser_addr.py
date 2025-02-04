@@ -645,8 +645,19 @@ def handle_city_state_zip(tokens):
         tokens.pop()
     return zipcode
 
+def handle_units(tokens: list[str], address: Address):
+    """
+    Docstring attempt added 2/4/2025
+    Handle units. Second input used to update address.address_unit IN-PLACE.
 
-def handle_units(tokens, unit):
+    Returns a 2-item list whose values, in order, are:
+        - unit designator (int): index of unit within tokens list if this function
+        hasn't fully handled it, or -1 if it has been handled
+        - unit type (str): putative unit type string (to be handled later by 
+        unit_designator_second_pass() function) if this function hasn't fully
+        handled it, or empty string if it has been handled
+    """
+    unit = address.address_unit
     tlen = len(tokens)
 
     # this should simplify the original method and possibly eliminate some of the logic at the end of this method
@@ -766,7 +777,7 @@ def handle_units(tokens, unit):
                 tokens[-2] = temp[0]
                 tokens.pop()
             # The units were standardized so run again. Watch out for endless loop
-            return handle_units(tokens, unit)
+            return handle_units(tokens, address)
 
     # now lets try the last token
     if tlen > 2:
@@ -1575,10 +1586,10 @@ def parse_addr_1(address, item):
     if token_len > 2 and tokens[0] == 'UNIT' or (token_len == 2 and len(tokens[1]) > 3 and tokens[0] == 'UNIT'):
         tokens.remove(tokens[0])
 
-    units = handle_units(tokens, address.address_unit)
+    units = handle_units(tokens, address)
 
     if units[0] != -1 and address.address_unit.unit_type == '':
-        tokens = unitdesignator_second_pass(address, units, tokens)
+        tokens = unit_designator_second_pass(address, units, tokens)
 
     # there isn't a street name, this is junk but put the unit back in the street name
     if len(tokens) == 0 and (address.address_unit.unit_num != '' or address.address_unit.unit_type != ''):
@@ -2112,7 +2123,7 @@ def parse_addr_1(address, item):
     return address
 
 
-def unitdesignator_second_pass(address, apt, tokens):
+def unit_designator_second_pass(address, apt, tokens):
     address.address_unit.unit_type = apt[1]
     tokens = tokens[0:apt[0]]
     aptsplit = address.address_unit.unit_type.split(' ')
