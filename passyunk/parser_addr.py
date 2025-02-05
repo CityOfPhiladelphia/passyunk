@@ -6,9 +6,8 @@ import re
 import sys
 
 from .data import opa_account_re, zipcode_re, STATELIST, CITYLIST, CARDINAL_DIR, PREPOSTDIR, POSTDIR, \
-    PREDIR_AS_NAME, \
-    SUFFIX_IN_NAME, \
-    APTFLOOR
+    PREDIR_AS_NAME, SUFFIX_IN_NAME, APTFLOOR, NON_NUMERIC_FLOORS
+from .rearrange_floor_tokens import rearrange_floor_tokens
 
 is_cl_file = False
 is_al_file = False
@@ -658,13 +657,32 @@ def handle_units(tokens: list[str], address: Address):
         handled it, or empty string if it has been handled
     """
     unit = address.address_unit
+    floor = address.floor
     tlen = len(tokens)
 
     # this should simplify the original method and possibly eliminate some of the logic at the end of this method
 
     if tlen > 3:
 
+        # first trial run of doing floor stuff here
+        print(f"At call of handle_units(): {tokens}")
+        if tokens[-2] in APTFLOOR and (tokens[-1].isdigit() or tokens[-1] in NON_NUMERIC_FLOORS):
+            floor.floor_num = tokens[-1]
+            floor.floor_type = 'FL'
+            tokens.pop()
+            tokens.pop()
+            return handle_units(tokens, address)
+
+
         if tokens[-2] == '#':
+
+            if tokens[-3] in APTFLOOR:
+                floor.floor_num = tokens[-1]
+                floor.floor_type = 'FL'
+                for _ in range(3):
+                    tokens.pop()
+                return handle_units(tokens, address)
+
             aptstd = is_apt_std(tokens[-1])
             if aptstd == '1ST':
                 aptstd = 'FL 1'
@@ -1467,6 +1485,10 @@ def split_lead_numbers_from_alpha_string(item):
 
 def parse_addr_1(address, item):
     tokens = split_lead_numbers_from_alpha_string(item)
+    print(f"After split_lead_numbers_from_alpha_string: {tokens}")
+    
+    tokens = rearrange_floor_tokens(tokens) # new
+    print(f"After rearrange_floor_tokens: {tokens}")
 
     if len(tokens) > 3 and tokens[0].isdigit() and (tokens[1] == 'BL' or
                                                             tokens[1] == 'BK' or
@@ -1483,8 +1505,6 @@ def parse_addr_1(address, item):
                                                             tokens[1] == 'OPPS' or
                                                             tokens[1] == 'OPT'):
         tokens.pop(0)
-
-    # TODO: rearrange "1234 MARKET ST UNIT 6 FLOOR 15" e.g. to "1234 MARKET ST FLOOR 15 UNIT 6"
     
     # 1600 John F kennedy bl
     # Need a better solution
