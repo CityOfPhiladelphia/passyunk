@@ -40,14 +40,16 @@ def rearrange_floor_tokens(tokens: list[str]) -> list[str]:
 
     if tokens[-1] in APTFLOOR: # e.g. [... "GROUND", "FLOOR"]
         if is_floor_ordinal(tokens[-2]):
+            tokens[-2] = remove_ordinal_suffix(tokens[-2])
             moving_token = tokens.pop(-1)
-            tokens.insert(-1, remove_ordinal_suffix(moving_token))
+            tokens.insert(-1, moving_token)
             return tokens
     
     if tokens[-2] in APTFLOOR:
         if is_floor_num(tokens[-1]): # e.g. [..."FLOOR", "15"]
             return tokens
         if is_floor_ordinal(tokens[-3]): # e.g. [..."GROUND", "FLOOR", "OFFICE"]
+            tokens[-3] = remove_ordinal_suffix(tokens[-3])
             moving_token = tokens.pop(-1)
             tokens.insert(-2, moving_token) # i.e. insert third-to-last
             floor_token = tokens.pop(-1)
@@ -62,7 +64,7 @@ def rearrange_floor_tokens(tokens: list[str]) -> list[str]:
         return tokens 
     
     if tokens[-3] in APTFLOOR: # e.g. [...'FLOOR', '#', '7']
-        if tokens[-2] == '#' and tokens[-1].isdigit():
+        if tokens[-2] == '#' and is_floor_num(tokens[-1]):
             return tokens
         
     # Walk back through the tokens, looking for a floor designator earlier in the input

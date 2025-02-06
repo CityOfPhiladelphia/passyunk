@@ -665,7 +665,6 @@ def handle_units(tokens: list[str], address: Address):
     if tlen > 3:
 
         # first trial run of doing floor stuff here
-        print(f"At call of handle_units(): {tokens}")
         if tokens[-2] in APTFLOOR and (tokens[-1].isdigit() or tokens[-1] in NON_NUMERIC_FLOORS):
             floor.floor_num = tokens[-1]
             floor.floor_type = 'FL'
@@ -1485,10 +1484,8 @@ def split_lead_numbers_from_alpha_string(item):
 
 def parse_addr_1(address, item):
     tokens = split_lead_numbers_from_alpha_string(item)
-    print(f"After split_lead_numbers_from_alpha_string: {tokens}")
     
     tokens = rearrange_floor_tokens(tokens) # new
-    print(f"After rearrange_floor_tokens: {tokens}")
 
     if len(tokens) > 3 and tokens[0].isdigit() and (tokens[1] == 'BL' or
                                                             tokens[1] == 'BK' or
