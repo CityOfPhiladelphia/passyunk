@@ -33,6 +33,8 @@ def is_oneword_floor(token: str) -> bool:
 
 
 def rearrange_floor_tokens(tokens: list[str]) -> list[str]:
+    """Put the portion of a tokens list representing the floor at the end, so it
+    can be easily dealt with in handle_units() prior to preexisting passyunk logic"""
     if len(tokens) < 3:
         return tokens
 
