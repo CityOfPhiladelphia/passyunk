@@ -447,10 +447,14 @@ def parse(item, MAX_RANGE):
                     address_uber.type != AddrType.zipcode:
         if address.address_unit.unit_num != -1:
             address_uber.components.output_address = address.base_address + ' ' + \
+                                                     address.floor.floor_type + ' ' + \
+                                                     address.floor.floor_num + ' ' + \
                                                      address.address_unit.unit_type + ' ' + \
                                                      address.address_unit.unit_num
         else:
             address_uber.components.output_address = address.base_address + ' ' + \
+                                                     address.floor.floor_type + ' ' + \
+                                                     address.floor.floor_num + ' ' + \
                                                      address.address_unit.unit_type + ' '
 
         address_uber.components.output_address = ' '.join(address_uber.components.output_address.split())
@@ -566,6 +570,15 @@ def parse(item, MAX_RANGE):
         address_uber.components.address_unit.unit_num = None
     if address_uber.components.address_unit.unit_type == '':
         address_uber.components.address_unit.unit_type = None
+
+    # if the only unit designator is floor, represent it in both the address_unit and floor components,
+    # so that the address_unit component always contains at least the one USPS unit designator present
+    if (address_uber.components.address_unit.unit_type is None and 
+        address_uber.components.floor.floor_num is not None):
+        floor_val = address_uber.components.floor.floor_num
+        address_uber.components.address_unit.unit_num = floor_val
+        address_uber.components.address_unit.unit_type = 'FL'
+
     if address_uber.input_address == '':
         address_uber.input_address = None
     if address_uber.components.output_address == '':
