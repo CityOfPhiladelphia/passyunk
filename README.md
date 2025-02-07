@@ -57,6 +57,10 @@ Takes an address, standardizes it, and returns a dictionary of address component
           "blockid": "24021362",
           "precinct": "0528"
         },
+        "floor": {
+          "floor_num": null,
+          "floor_type": null
+        },
         "mailing": {
           "bldgfirm": "MARKET STREET BLDG",
           "matchdesc": "Multiple Zip4 Matches",

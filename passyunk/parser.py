@@ -602,8 +602,8 @@ def input_cleanup(address_uber, item):
 
     items = item.split('#')
     if len(items) > 2:
-        # item = "{} # {}".format(items[0], items[2]) # OLD
-        item = "#".join(items) # allow for more than one # within address, e.g. '1234 MARKET STREET FLOOR # 15 UNIT # 6'
+        item = "{} # {}".format(items[0], items[2]) # OLD
+        # item = "#".join(items) # allow for more than one # within address, e.g. '1234 MARKET STREET FLOOR # 15 UNIT # 6'
 
     # get rid of trailing #  1608 South St #
     if len(items) == 2 and items[1] == '':
