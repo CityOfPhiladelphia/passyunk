@@ -8,8 +8,6 @@ def is_floor_num(token: str) -> bool:
 
 def is_floor_ordinal(token: str) -> bool:
     """Check whether this token can come BEFORE a word for floor."""
-    # TODO: replace this with a csv with common and correct columns like aptstd.csv
-    # and create a real lookup for them
     return (len(token) >= 3 and 
             (token[-3:] in {"1ST", "2ND", "3RD", "4TH", "5TH", "6TH", "7TH", "8TH", "9TH", "0TH"} or 
              token in NON_NUMERIC_FLOORS))
@@ -26,7 +24,7 @@ def remove_ordinal_suffix(token: str) -> bool:
     return token
 
 
-# TODO: replace this with an actual lookup structure like create_aptstd_lookup
+# TODO: consider replacing with a csv-derived lookup object in line with create_aptstd_lookup
 def is_oneword_floor(token: str) -> bool:
     return ((token[:-1].isdigit() and token[-1] == 'F') or
             (token[:-2].isdigit() and token[-2:] == 'FL'))
@@ -102,9 +100,3 @@ def rearrange_floor_tokens(tokens: list[str]) -> list[str]:
             return tokens
     
     return tokens 
-
-if __name__ == '__main__':
-    example = ['MARKET', 'ST', 'GROUND', 'FLOOR', 'LBBY']
-    print(f'{example} ->')
-    result = rearrange_floor_tokens(example)
-    print(f'{result}')

@@ -739,7 +739,6 @@ class PassyunkParser:
             parsed_out.components.address = parsed_out.components.address.__dict__
             parsed_out.components.street = parsed_out.components.street.__dict__
             parsed_out.components.street_2 = parsed_out.components.street_2.__dict__
-            # TODO: adding this creates this warning in pytests: "...parser.py:636: DeprecationWarning: invalid escape sequence \+". why??
             parsed_out.components.floor = parsed_out.components.floor.__dict__ 
             parsed_out.components.address_unit = parsed_out.components.address_unit.__dict__
             parsed_out.components = parsed_out.components.__dict__
