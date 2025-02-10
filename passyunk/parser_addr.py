@@ -6,7 +6,7 @@ import re
 import sys
 
 from .data import opa_account_re, zipcode_re, STATELIST, CITYLIST, CARDINAL_DIR, PREPOSTDIR, POSTDIR, \
-    PREDIR_AS_NAME, SUFFIX_IN_NAME, APTFLOOR, NON_NUMERIC_FLOORS
+    PREDIR_AS_NAME, SUFFIX_IN_NAME, APTFLOOR, NON_NUMERIC_FLOORS, FLOOR_MAX
 from .rearrange_floor_tokens import rearrange_floor_tokens
 
 is_cl_file = False
@@ -666,8 +666,12 @@ def handle_units(tokens: list[str], address: Address):
 
         # populate floor fields if necessary before doing anything else with units info
         if tokens[-2] in APTFLOOR and (tokens[-1].isdigit() or tokens[-1] in NON_NUMERIC_FLOORS):
-            floor.floor_num = tokens[-1]
-            floor.floor_type = 'FL'
+            if tokens[-1].isdigit() and int(tokens[-1]) > FLOOR_MAX:
+                floor.floor_num = ''
+                floor.floor_type = ''
+            else:
+                floor.floor_num = tokens[-1]
+                floor.floor_type = 'FL'
             tokens.pop()
             tokens.pop()
             return handle_units(tokens, address)
@@ -1484,8 +1488,10 @@ def split_lead_numbers_from_alpha_string(item):
 
 def parse_addr_1(address, item):
     tokens = split_lead_numbers_from_alpha_string(item)
+    print(tokens)
     
     tokens = rearrange_floor_tokens(tokens)
+    print(tokens)
 
     if len(tokens) > 3 and tokens[0].isdigit() and (tokens[1] == 'BL' or
                                                             tokens[1] == 'BK' or

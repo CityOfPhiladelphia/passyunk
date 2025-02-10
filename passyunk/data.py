@@ -49,6 +49,7 @@ SUFFIX_IN_NAME = ['SPRING GRDN', 'AUTUMN HL', 'CHESTNUT HL', 'COBBS CRK', 'DELAI
                   'HUNTING PARK', 'AYRDALE CRES']
 APTSPECIAL_2TOKEN = ['2ND FL', '1ST FL', '2ND', '1ST', 'PINE PL', 'SCHUYLKILL AVE']
 APTSPECIAL_1TOKEN = ['2ND', '1ST', '2R', '1R', '01FL', '02FL', '03FL']
+FLOOR_MAX = 99
 
 zipcode_re = re.compile('^(\d{5}(\-\d{4})?)?$')
 
@@ -69,7 +70,6 @@ po_box_re = re.compile('^P(\.|OST)? ?O(\.|FFICE)? ?BOX (?P<num>\w+)$')
 SPECIAL_CHARS_ALLOWED = r' \-\\\t/&@,.#'
 # Add alphanumerics to special chars allowed, negate, and compile regex object.
 ILLEGAL_CHARS_RE = re.compile('[^A-Z0-9{}]'.format(SPECIAL_CHARS_ALLOWED))
-
 
 class Enum(set):
     def __getattr__(self, name):

@@ -1,9 +1,12 @@
 #from data import APTFLOOR, NON_NUMERIC_FLOORS # for standalone testing of file, uncomment this and comment line below
 from .data import APTFLOOR, NON_NUMERIC_FLOORS
+import re
 
 def is_floor_num(token: str) -> bool:
     """Check whether this token can come AFTER a word for floor."""
-    return (token.isdigit() or token in NON_NUMERIC_FLOORS)
+    return (token.isdigit() or 
+            token in NON_NUMERIC_FLOORS or
+            (token[0] == '#' and token[1:].isdigit()))
 
 
 def is_floor_ordinal(token: str) -> bool:
@@ -29,6 +32,10 @@ def is_oneword_floor(token: str) -> bool:
     return ((token[:-1].isdigit() and token[-1] == 'F') or
             (token[:-2].isdigit() and token[-2:] == 'FL'))
 
+# def no_numbersign(token: str) -> str:
+#     if token[0] == '#':
+#         return token[1:]
+#     return token
 
 def rearrange_floor_tokens(tokens: list[str]) -> list[str]:
     """Put the portion of a tokens list representing the floor at the end, so it
@@ -56,13 +63,14 @@ def rearrange_floor_tokens(tokens: list[str]) -> list[str]:
     
     if is_oneword_floor(tokens[-1]): # e.g. [... "15F"]
         moving_token = tokens.pop(-1)
-        moving_token = moving_token.replace('L', '').replace('F', '')
+        moving_token = re.sub(r'F|L|#', '', moving_token)
         tokens.append("FL")
         tokens.append(moving_token)
         return tokens 
     
     if tokens[-3] in APTFLOOR: # e.g. [...'FLOOR', '#', '7']
         if tokens[-2] == '#' and is_floor_num(tokens[-1]):
+            tokens.pop(-2)
             return tokens
         
     # Walk back through the tokens, looking for a floor designator earlier in the input
@@ -76,12 +84,14 @@ def rearrange_floor_tokens(tokens: list[str]) -> list[str]:
                 before_tokens = tokens[:nix]
                 after_tokens = tokens[nix+2:] 
                 tokens = before_tokens + after_tokens + moving_slice
+                # tokens[-1] = no_numbersign(tokens[-1])
                 return tokens
             if tokens[nix+1] == '#' and tokens[nix+2].isdigit(): # e.g. [...'FLOOR', '#', '7', ...]
                 moving_slice = tokens[nix:nix+3]
                 before_tokens = tokens[:nix]
                 after_tokens = tokens[nix+3:]
                 tokens = before_tokens + after_tokens + moving_slice
+                tokens.pop(-2)
                 return tokens
             if is_floor_ordinal(tokens[nix-1]): # e.g. [...'GROUND', 'FLOOR', ...] or [... '15TH', 'FLOOR', ...]
                 ordinal = tokens[nix-1]
