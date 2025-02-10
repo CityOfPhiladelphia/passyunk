@@ -1,7 +1,5 @@
 from passyunk.parser import PassyunkParser
 import pytest
-# import sys 
-# print(sys.path)
 
 @pytest.fixture
 def p():
@@ -53,8 +51,12 @@ def test_floor15_unit6(p, mkt):
     examples = [
         "Floor 15 Unit 6",
         "Unit 6 Floor 15",
-        "Floor #15 Unit #6",
-        "Unit #6 Floor #15",
+        "Floor #15 Unit 6",
+        "Unit 6 Floor #15",
+        "Floor 15 Unit #6",
+        "Unit #6 Floor 15",
+        # "Floor #15 Unit #6",
+        # "Unit 6 Floor #15",
     ]
     for test_addr in examples:
         ans = p.parse(mkt + test_addr)
@@ -142,6 +144,17 @@ def test_standalone_number(p, mkt):
     print(f"Floor component: {ac['floor']}")
     print(f"Unit component: {ac['address_unit']}\n")
     assert ac['floor']['floor_num'] is None 
+    assert ac['floor']['floor_type'] is None    
+
+def test_adversarially_long_input(p, mkt):
+    test_addr = mkt + "FL 99999999999999999"
+    ans = p.parse(test_addr)
+    print(test_addr)
+    ac = ans['components']
+    print(f"Floor component: {ac['floor']}")
+    print(f"Unit component: {ac['address_unit']}\n")
+    assert ac['floor']['floor_num'] is None 
     assert ac['floor']['floor_type'] is None 
     assert ac['address_unit']['unit_num'] is None 
     assert ac['address_unit']['unit_type'] is None    
+   
