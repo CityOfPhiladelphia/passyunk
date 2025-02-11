@@ -1488,10 +1488,7 @@ def split_lead_numbers_from_alpha_string(item):
 
 def parse_addr_1(address, item):
     tokens = split_lead_numbers_from_alpha_string(item)
-    print(tokens)
-    
     tokens = rearrange_floor_tokens(tokens)
-    print(tokens)
 
     if len(tokens) > 3 and tokens[0].isdigit() and (tokens[1] == 'BL' or
                                                             tokens[1] == 'BK' or
