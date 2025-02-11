@@ -8,23 +8,18 @@ def is_floor_num(token: str) -> bool:
             token in NON_NUMERIC_FLOORS or
             (token[0] == '#' and token[1:].isdigit()))
 
+ORD_RE = r'(\d)(ST|ND|RD|TH)' # will match string endings such as 1ST, 11TH, 2ND, 3RD, 4TH...
 
 def is_floor_ordinal(token: str) -> bool:
     """Check whether this token can come BEFORE a word for floor."""
     return (len(token) >= 3 and 
-            (token[-3:] in {"1ST", "2ND", "3RD", "4TH", "5TH", "6TH", "7TH", "8TH", "9TH", "0TH"} or 
+            (re.search(ORD_RE, token) or 
              token in NON_NUMERIC_FLOORS))
 
 
 def remove_ordinal_suffix(token: str) -> bool:
-    ord_lookup = {
-        "1ST": "1", "2ND": "2", "3RD": "3", "4TH": "4", "5TH": "5", 
-        "6TH": "6", "7TH": "7", "8TH": "8", "9TH": "9", "0TH": "0"
-        }
-    for k, v in ord_lookup.items():
-        if k in token:
-            return token.replace(k, v)
-    return token
+    ORD_RE = r'(\d)(ST|ND|RD|TH)'
+    return re.sub(ORD_RE, r'\1', token)
 
 
 # TODO: consider replacing with a csv-derived lookup object in line with create_aptstd_lookup

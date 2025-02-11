@@ -133,7 +133,7 @@ def test_floor_word(p, mkt):
         assert ac['floor']['floor_num'] == 'GROUND'
         assert ac['floor']['floor_type'] == 'FL'
         assert ac['address_unit']['unit_num'] == 'GROUND'
-        assert ac['address_unit']['unit_type'] == 'FL'      
+        assert ac['address_unit']['unit_type'] == 'FL'
 
 def test_standalone_number(p, mkt):
     # This should not parse as a floor
@@ -158,3 +158,14 @@ def test_adversarially_long_input(p, mkt):
     assert ac['address_unit']['unit_num'] is None 
     assert ac['address_unit']['unit_type'] is None    
    
+def test_11th_floor(p, mkt):
+    test_addr = mkt + "11TH FL"
+    ans = p.parse(test_addr)
+    print(test_addr)
+    ac = ans['components']
+    print(f"Floor component: {ac['floor']}")
+    print(f"Unit component: {ac['address_unit']}\n")
+    assert ac['floor']['floor_num'] == '11'
+    assert ac['floor']['floor_type'] == 'FL' 
+    assert ac['address_unit']['unit_num'] == '11' 
+    assert ac['address_unit']['unit_type'] == 'FL'    
