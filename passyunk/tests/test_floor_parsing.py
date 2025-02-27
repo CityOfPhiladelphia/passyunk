@@ -169,3 +169,15 @@ def test_11th_floor(p, mkt):
     assert ac['floor']['floor_type'] == 'FL' 
     assert ac['address_unit']['unit_num'] == '11' 
     assert ac['address_unit']['unit_type'] == 'FL'    
+
+def test_apt_nf(p, mkt):
+    test_addr = '1326 S BROAD ST APT 1F'
+    ans = p.parse(test_addr)
+    ac = ans['components']
+    print(test_addr)
+    print(f"Floor component: {ac['floor']}")
+    print(f"Unit component: {ac['address_unit']}\n")
+    assert ac['floor']['floor_num'] is None 
+    assert ac['floor']['floor_type'] is None
+    assert ac['address_unit']['unit_num'] == '1F'
+    assert ac['address_unit']['unit_type'] == 'APT' 

@@ -23,14 +23,10 @@ def remove_ordinal_suffix(token: str) -> bool:
 
 
 # TODO: consider replacing with a csv-derived lookup object in line with create_aptstd_lookup
+# TODO: consider eliminating this option altogether since a lot of legit addresses are e.g. '...APT 2F' or 'UNIT 2F'
 def is_oneword_floor(token: str) -> bool:
     return ((token[:-1].isdigit() and token[-1] == 'F') or
             (token[:-2].isdigit() and token[-2:] == 'FL'))
-
-# def no_numbersign(token: str) -> str:
-#     if token[0] == '#':
-#         return token[1:]
-#     return token
 
 def rearrange_floor_tokens(tokens: list[str]) -> list[str]:
     """Put the portion of a tokens list representing the floor at the end, so it
@@ -56,7 +52,10 @@ def rearrange_floor_tokens(tokens: list[str]) -> list[str]:
             tokens.insert(-1, floor_token)
             return tokens
     
-    if is_oneword_floor(tokens[-1]): # e.g. [... "15F"]
+    # There are apartments like 'APT 15F' so this can't be how it is
+    if is_oneword_floor(tokens[-1]): # e.g. [... "15F"] 
+        if tokens[-2] in ['APT', 'UNIT', '#']: # but not e.g. [... 'UNIT', '1F']
+            return tokens
         moving_token = tokens.pop(-1)
         moving_token = re.sub(r'F|L|#', '', moving_token)
         tokens.append("FL")
