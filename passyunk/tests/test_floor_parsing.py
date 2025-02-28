@@ -170,6 +170,18 @@ def test_11th_floor(p, mkt):
     assert ac['address_unit']['unit_num'] == '11' 
     assert ac['address_unit']['unit_type'] == 'FL'    
 
+def test_floor_lstrip_0(p, mkt):
+    test_addr = mkt + "01ST FL"
+    ans = p.parse(test_addr)
+    print(test_addr)
+    ac = ans['components']
+    print(f"Floor component: {ac['floor']}")
+    print(f"Unit component: {ac['address_unit']}\n")
+    assert ac['floor']['floor_num'] == '1'
+    assert ac['floor']['floor_type'] == 'FL' 
+    assert ac['address_unit']['unit_num'] == '1' 
+    assert ac['address_unit']['unit_type'] == 'FL' 
+
 def test_apt_nf(p):
     test_addr = '1326 S BROAD ST APT 1F'
     ans = p.parse(test_addr)

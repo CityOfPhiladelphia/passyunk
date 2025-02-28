@@ -32,3 +32,6 @@ def test_rearrange_pound_nf():
 
 def test_rearrange_streetnumber_ends_in_f():
     assert rearrange_floor_tokens('3411F SPRING GARDEN ST'.split()) == '3411F SPRING GARDEN ST'.split()
+
+def test_lstrip_0_from_floornum():
+    assert rearrange_floor_tokens('3405 ARTHUR ST # 01ST FL').split()) == ['3405', 'ARTHUR', 'ST', '#', 'FL', '1']

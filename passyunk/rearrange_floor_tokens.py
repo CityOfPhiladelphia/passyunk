@@ -17,9 +17,8 @@ def is_floor_ordinal(token: str) -> bool:
              token in NON_NUMERIC_FLOORS))
 
 
-def remove_ordinal_suffix(token: str) -> bool:
-    ORD_RE = r'(\d)(ST|ND|RD|TH)'
-    return re.sub(ORD_RE, r'\1', token)
+def remove_ordinal_suffix(token: str) -> str:
+    return re.sub(ORD_RE, r'\1', token).lstrip('0')
 
 
 # TODO: consider replacing with a csv-derived lookup object in line with create_aptstd_lookup
