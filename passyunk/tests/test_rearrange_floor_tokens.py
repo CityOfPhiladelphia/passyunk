@@ -19,14 +19,16 @@ def test_rearrange_floor_tokens():
     for k, v in examples.items():
         assert rearrange_floor_tokens(list(k)) == v
 
+# Things that should not be changed by this function
+
 def test_rearrange_apt_nf():
-    assert rearrange_floor_tokens(['1234', 'MARKET', 'ST', 'APT', '3F']) == ['1234', 'MARKET', 'ST', 'APT', '3F'] # should not change
+    assert rearrange_floor_tokens(['1234', 'MARKET', 'ST', 'APT', '3F']) == ['1234', 'MARKET', 'ST', 'APT', '3F']
 
 def test_rearrange_unit_nf():
-    assert rearrange_floor_tokens(['1234', 'MARKET', 'ST', 'UNIT', '3F']) == ['1234', 'MARKET', 'ST', 'UNIT', '3F'] # should not change    
+    assert rearrange_floor_tokens(['1234', 'MARKET', 'ST', 'UNIT', '3F']) == ['1234', 'MARKET', 'ST', 'UNIT', '3F']  
 
 def test_rearrange_pound_nf():
-    assert rearrange_floor_tokens(['1234', 'MARKET', 'ST', '#', '3F']) == ['1234', 'MARKET', 'ST', '#', '3F'] # should not change
+    assert rearrange_floor_tokens(['1234', 'MARKET', 'ST', '#', '3F']) == ['1234', 'MARKET', 'ST', '#', '3F']
 
 def test_rearrange_streetnumber_ends_in_f():
     assert rearrange_floor_tokens('3411F SPRING GARDEN ST'.split()) == '3411F SPRING GARDEN ST'.split()
