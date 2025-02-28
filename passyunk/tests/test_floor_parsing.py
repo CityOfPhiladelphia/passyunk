@@ -15,9 +15,6 @@ def test_nonsense(p, mkt):
     test_addr = mkt + "Zebra Octopus Llama Fish Elephant Bird"
     ans = p.parse(test_addr)
     ac = ans['components']
-    print(test_addr)
-    print(f"Floor component: {ac['floor']}")
-    print(f"Unit component: {ac['address_unit']}\n")
     assert ac['floor']['floor_num'] is None
     assert ac['floor']['floor_type'] is None
     assert ac['address_unit']['unit_num'] is None
@@ -38,9 +35,6 @@ def test_just_floor15(p, mkt):
     for test_addr in examples:
         ans = p.parse(mkt + test_addr)
         ac = ans['components']
-        print(mkt + test_addr)
-        print(f"Floor component: {ac['floor']}")
-        print(f"Unit component: {ac['address_unit']}\n")
         assert ac['floor']['floor_num'] == '15'
         assert ac['floor']['floor_type'] == 'FL'
         assert ac['address_unit']['unit_num'] == '15'
@@ -61,9 +55,6 @@ def test_floor15_unit6(p, mkt):
     for test_addr in examples:
         ans = p.parse(mkt + test_addr)
         ac = ans['components']
-        print(mkt + test_addr)
-        print(f"Floor component: {ac['floor']}")
-        print(f"Unit component: {ac['address_unit']}\n")
         assert ac['floor']['floor_num'] == '15'
         assert ac['floor']['floor_type'] == 'FL'
         assert ac['address_unit']['unit_num'] == '6'
@@ -78,9 +69,6 @@ def test_floor15_apt6(p, mkt):
     for test_addr in examples:
         ans = p.parse(mkt + test_addr)
         ac = ans['components']
-        print(mkt + test_addr)
-        print(f"Floor component: {ac['floor']}")
-        print(f"Unit component: {ac['address_unit']}\n")
         assert ac['floor']['floor_num'] == '15'
         assert ac['floor']['floor_type'] == 'FL'
         assert ac['address_unit']['unit_num'] == '6'
@@ -97,9 +85,6 @@ def test_floor15_office(p, mkt):
     for test_addr in examples:
         ans = p.parse(mkt + test_addr)
         ac = ans['components']
-        print(mkt + test_addr)
-        print(f"Floor component: {ac['floor']}")
-        print(f"Unit component: {ac['address_unit']}\n")
         assert ac['floor']['floor_num'] == '15'
         assert ac['floor']['floor_type'] == 'FL'
         assert ac['address_unit']['unit_num'] is None
@@ -110,9 +95,6 @@ def test_15f(p, mkt):
     test_addr = mkt + "15F"
     ans = p.parse(test_addr)
     ac = ans['components']
-    print(test_addr)
-    print(f"Floor component: {ac['floor']}")
-    print(f"Unit component: {ac['address_unit']}\n")
     assert ac['floor']['floor_num'] == '15'
     assert ac['floor']['floor_type'] == 'FL'
     assert ac['address_unit']['unit_num'] == '15'
@@ -127,9 +109,6 @@ def test_floor_word(p, mkt):
     for test_addr in examples:
         ans = p.parse(mkt + test_addr)
         ac = ans['components']
-        print(mkt + test_addr)
-        print(f"Floor component: {ac['floor']}")
-        print(f"Unit component: {ac['address_unit']}\n")
         assert ac['floor']['floor_num'] == 'GROUND'
         assert ac['floor']['floor_type'] == 'FL'
         assert ac['address_unit']['unit_num'] == 'GROUND'
@@ -139,20 +118,14 @@ def test_standalone_number(p, mkt):
     # This should not parse as a floor
     test_addr = mkt + "15"
     ans = p.parse(test_addr)
-    print(test_addr)
     ac = ans['components']
-    print(f"Floor component: {ac['floor']}")
-    print(f"Unit component: {ac['address_unit']}\n")
     assert ac['floor']['floor_num'] is None 
     assert ac['floor']['floor_type'] is None    
 
 def test_adversarially_long_input(p, mkt):
     test_addr = mkt + "FL 99999999999999999"
     ans = p.parse(test_addr)
-    print(test_addr)
     ac = ans['components']
-    print(f"Floor component: {ac['floor']}")
-    print(f"Unit component: {ac['address_unit']}\n")
     assert ac['floor']['floor_num'] is None 
     assert ac['floor']['floor_type'] is None 
     assert ac['address_unit']['unit_num'] is None 
@@ -161,10 +134,7 @@ def test_adversarially_long_input(p, mkt):
 def test_11th_floor(p, mkt):
     test_addr = mkt + "11TH FL"
     ans = p.parse(test_addr)
-    print(test_addr)
     ac = ans['components']
-    print(f"Floor component: {ac['floor']}")
-    print(f"Unit component: {ac['address_unit']}\n")
     assert ac['floor']['floor_num'] == '11'
     assert ac['floor']['floor_type'] == 'FL' 
     assert ac['address_unit']['unit_num'] == '11' 
@@ -173,10 +143,7 @@ def test_11th_floor(p, mkt):
 def test_floor_lstrip_0(p, mkt):
     test_addr = mkt + "01ST FL"
     ans = p.parse(test_addr)
-    print(test_addr)
     ac = ans['components']
-    print(f"Floor component: {ac['floor']}")
-    print(f"Unit component: {ac['address_unit']}\n")
     assert ac['floor']['floor_num'] == '1'
     assert ac['floor']['floor_type'] == 'FL' 
     assert ac['address_unit']['unit_num'] == '1' 
@@ -186,9 +153,6 @@ def test_apt_nf(p):
     test_addr = '1326 S BROAD ST APT 1F'
     ans = p.parse(test_addr)
     ac = ans['components']
-    print(test_addr)
-    print(f"Floor component: {ac['floor']}")
-    print(f"Unit component: {ac['address_unit']}\n")
     assert ac['floor']['floor_num'] is None 
     assert ac['floor']['floor_type'] is None
     assert ac['address_unit']['unit_num'] == '1F'
@@ -198,8 +162,14 @@ def test_apt_number_ends_in_f(p):
     test_addr = '3411F SPRING GARDEN ST'
     ans = p.parse(test_addr)
     ac = ans['components']    
-    print(test_addr)
-    print(f"Floor component: {ac['floor']}")
-    print(f"Unit component: {ac['address_unit']}\n")
     assert ac['floor']['floor_num'] is None 
     assert ac['floor']['floor_type'] is None
+
+def test_18261F_edgecase(p):
+    test_addr = '1826 GREEN ST # 18261F'
+    ans = p.parse(test_addr)
+    ac = ans['components']    
+    assert ac['floor']['floor_num'] is None 
+    assert ac['floor']['floor_type'] is None
+    assert ac['address_unit']['unit_num'] == '18261F'
+    assert ac['address_unit']['unit_type'] == '#' 
