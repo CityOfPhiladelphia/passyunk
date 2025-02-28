@@ -26,4 +26,7 @@ def test_rearrange_unit_nf():
     assert rearrange_floor_tokens(['1234', 'MARKET', 'ST', 'UNIT', '3F']) == ['1234', 'MARKET', 'ST', 'UNIT', '3F'] # should not change    
 
 def test_rearrange_pound_nf():
-        assert rearrange_floor_tokens(['1234', 'MARKET', 'ST', '#', '3F']) == ['1234', 'MARKET', 'ST', '#', '3F'] # should not change
+    assert rearrange_floor_tokens(['1234', 'MARKET', 'ST', '#', '3F']) == ['1234', 'MARKET', 'ST', '#', '3F'] # should not change
+
+def test_rearrange_streetnumber_ends_in_f():
+    assert rearrange_floor_tokens('3411F SPRING GARDEN ST'.split()) == '3411F SPRING GARDEN ST'.split()

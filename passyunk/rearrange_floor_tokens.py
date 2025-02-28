@@ -72,6 +72,8 @@ def rearrange_floor_tokens(tokens: list[str]) -> list[str]:
         nix = -ix - 1 # get the pythonic negative index
         if nix >= -2:
             continue
+        if nix == -len(tokens): # street numbers like '3411F SPRING GARDEN ST' should remain unchanged
+            break
         if token in APTFLOOR:
             if is_floor_num(tokens[nix+1]): # e.g. [...'FLOOR', '7', ...]
                 moving_slice = tokens[nix:nix+2]
