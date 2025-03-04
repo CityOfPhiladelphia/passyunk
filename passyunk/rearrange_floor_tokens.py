@@ -53,9 +53,8 @@ def rearrange_floor_tokens(tokens: list[str]) -> list[str]:
             tokens.insert(-1, floor_token)
             return tokens
     
-    # There are apartments like 'APT 15F' so this can't be how it is
     if is_oneword_floor(tokens[-1]): # e.g. [... "15F"] 
-        if tokens[-2] in ['APT', 'UNIT', '#', 'FRNT']: # but not e.g. [... 'UNIT', '1F']
+        if tokens[-2] in ['APT', 'UNIT', '#', 'FRNT', 'SIDE']: # but not e.g. [... 'UNIT', '1F']
             return tokens
         moving_token = tokens.pop(-1)
         moving_token = re.sub(r'F|L|#', '', moving_token)
