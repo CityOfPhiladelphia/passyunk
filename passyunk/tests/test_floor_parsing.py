@@ -173,3 +173,11 @@ def test_18261F_edgecase(p):
     assert ac['floor']['floor_type'] is None
     assert ac['address_unit']['unit_num'] == '18261F'
     assert ac['address_unit']['unit_type'] == '#' 
+
+def test_populate_floor_field_from_old_way(p):
+    test_addr = '1517 ARROTT ST # 2ND' # this parsed to '1517 ARROTT ST FL 2' already using apt_std lookup or something like it
+    ans = p.parse(test_addr)
+    ac = ans['components']
+    # make sure that unit field values get copied back to floor field
+    assert ac['floor']['floor_num'] == ac['address_unit']['unit_num'] == '2'
+    assert ac['floor']['floor_type'] == ac['address_unit']['unit_type'] == 'FL'

@@ -22,7 +22,7 @@ from copy import deepcopy
 # Public Data
 from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2, create_al_lookup # centerline.csv, alias.csv - Public
 from .data import opa_account_re, zipcode_re, po_box_re, mapreg_re, AddrType, \
-    ILLEGAL_CHARS_RE # suffix.csv - Public
+    ILLEGAL_CHARS_RE, APTFLOOR # suffix.csv - Public
 from .parser_addr import parse_addr_1, name_switch, is_centerline_street_name, is_centerline_street_pre, \
     is_centerline_street_suffix, is_centerline_name, Address # suffix.csv, name_switch.csv, centerline_streets.csv, directional.csv, saint.csv, std.csv, apt.csv, apt_std.csv, apte.csv - Public
 from .landmark import Landmark # landmarks.csv - Public
@@ -578,6 +578,15 @@ def parse(item, MAX_RANGE):
         floor_val = address_uber.components.floor.floor_num
         address_uber.components.address_unit.unit_num = floor_val
         address_uber.components.address_unit.unit_type = 'FL'
+
+    # if a unit designator was converted from something else to a floor designator through aptstd lookup path,
+    # make sure that floor information is copied back to floor fields
+    if (address_uber.components.address_unit.unit_type in APTFLOOR and 
+        address_uber.components.address_unit.unit_num is not None):
+        floor_val = address_uber.components.address_unit.unit_num
+        floor_type = address_uber.components.address_unit.unit_type
+        address_uber.components.floor.floor_num = floor_val
+        address_uber.components.floor.floor_type = floor_type
 
     if address_uber.input_address == '':
         address_uber.input_address = None
