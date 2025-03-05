@@ -181,3 +181,12 @@ def test_populate_floor_field_from_old_way(p):
     # make sure that unit field values get copied back to floor field
     assert ac['floor']['floor_num'] == ac['address_unit']['unit_num'] == '2'
     assert ac['floor']['floor_type'] == ac['address_unit']['unit_type'] == 'FL'
+
+def test_ste_1f(p):
+    test_addr = '1810 Spruce St Ste 1f'
+    ans = p.parse(test_addr)
+    ac = ans['components']
+    assert ac['floor']['floor_num'] is None
+    assert ac['floor']['floor_type'] is None
+    assert ac['address_unit']['unit_num'] == '1F'
+    assert ac['address_unit']['unit_type'] == 'STE'

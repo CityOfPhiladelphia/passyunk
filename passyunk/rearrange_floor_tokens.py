@@ -54,7 +54,7 @@ def rearrange_floor_tokens(tokens: list[str]) -> list[str]:
             return tokens
     
     if is_oneword_floor(tokens[-1]): # e.g. [... "15F"] 
-        if tokens[-2] in ['APT', 'UNIT', '#', 'FRNT', 'SIDE']: # but not e.g. [... 'UNIT', '1F']
+        if tokens[-2] in ['APT', 'UNIT', '#', 'FRNT', 'SIDE', 'STE']: # but not e.g. [... 'UNIT', '1F']
             return tokens
         moving_token = tokens.pop(-1)
         moving_token = re.sub(r'F|L|#', '', moving_token)
