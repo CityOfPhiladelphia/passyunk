@@ -22,7 +22,7 @@ class Landmark:
         path = self.csv_path('landmarks')
         landmark_dict = {}
         try:
-            with open(path, 'r') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 reader = csv.reader(f)
                 for row in reader:
                     # Don't match on 'the' as first word
