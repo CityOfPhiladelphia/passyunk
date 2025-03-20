@@ -16,6 +16,21 @@ def private_installed():
     except ModuleNotFoundError as e: 
         return False
 
+
+def test_zip_1(p, private_installed):
+    test_addr = "1 S BROAD ST FL 14"
+    ac = p.parse(test_addr)['components']
+    assert private_installed
+    assert ac['mailing']['zipcode'] == '19107' # should not be blank
+
+
+def test_zip_2(p, private_installed):
+    test_addr = "761 S 4TH ST FL 3"
+    ac = p.parse(test_addr)['components']
+    assert private_installed
+    assert ac['mailing']['zipcode'] == '19147' # should not be blank
+
+
 def test_zip4_1(p, private_installed):
     test_addr = "1 COMCAST CTR FL 32"
     ac = p.parse(test_addr)['components']
@@ -37,3 +52,11 @@ def test_zip4_unittype(p, private_installed):
     assert ac['mailing']['zip4'] == '6004'
     assert ac['address_unit']['unit_num'] == '1C'
     assert ac['address_unit']['unit_type'] == 'APT'
+
+
+def test_unittype(p, private_installed):
+    test_addr = "1 ACADEMY CIR # 112"
+    ac = p.parse(test_addr)['components']
+    assert private_installed
+    assert ac['address_unit']['unit_num'] == '112'
+    assert ac['address_unit']['unit_type'] == 'UNIT'
