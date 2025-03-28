@@ -415,7 +415,7 @@ TYPE TESTS
 '''
 
 
-def issuffix(test):
+def is_suffix(test):
     # 0 - not a suffix
     # 1 - standard suffix abbr
     # 2 - long suffix
@@ -840,7 +840,7 @@ def handle_units(tokens: list[str], address: Address):
     if len(tokens) > 3:
         apt = is_apt(tokens[-1])
         apte = is_apte(tokens[-1])
-        suff = issuffix(tokens[-2])
+        suff = is_suffix(tokens[-2])
 
         if apte.correct != '':
             return [len(tokens) - 1, apte.correct]
@@ -864,8 +864,6 @@ def handle_units(tokens: list[str], address: Address):
     if tlen > 2:
         addrn = is_addr(tokens[-1], 2)
         apt = is_apt(tokens[-2])
-        # tempDir1 = isDir(tokens[-2],dir_lookup)
-        # tempsuffix1 = isSuffix(tokens[-2],suffixLookup)
 
         if addrn.isaddr and apt.correct != '':
             return [tlen - 2, apt.correct + ' ' + addrn.low]
@@ -874,7 +872,7 @@ def handle_units(tokens: list[str], address: Address):
 
     if tlen > 2:
         apt = is_apte(tokens[-1])
-        tempsuffix1 = issuffix(tokens[-2])
+        tempsuffix1 = is_suffix(tokens[-2])
 
         if apt.correct != '' and tempsuffix1.std != '0':
             return [tlen - 1, apt.correct]
@@ -1445,9 +1443,9 @@ def split_lead_numbers_from_alpha_string(item):
     pre_dir = is_dir(tokens[0])
 
     # northeast ave
-    suffix = issuffix('')
+    suffix = is_suffix('')
     if len(tokens) > 1:
-        suffix = issuffix(tokens[1])
+        suffix = is_suffix(tokens[1])
     # this line has to sync with the same one below
     if len(tokens) >= 1 and pre_dir.std != '0' and suffix.std == '0':
         del tokens[0]
@@ -1655,7 +1653,7 @@ def parse_addr_1(address, item):
     tokens = handle_mt(tokens)
 
     if token_len == 2:
-        suffix_end = issuffix(tokens[-1])
+        suffix_end = is_suffix(tokens[-1])
 
         # 1234 10TH ST
         if suffix_end.std != '0':
@@ -1716,8 +1714,8 @@ def parse_addr_1(address, item):
     if token_len == 3:
         pre_dir = is_dir(tokens[0])
         post_dir = is_dir(tokens[2])
-        suffix_minus_one = issuffix(tokens[2])
-        suffix_end = issuffix(tokens[1])
+        suffix_minus_one = is_suffix(tokens[2])
+        suffix_end = is_suffix(tokens[1])
 
         # 1234 N 10TH ST
         if suffix_minus_one.std != '0' and pre_dir.std != '0':
@@ -1809,9 +1807,9 @@ def parse_addr_1(address, item):
     if token_len == 4:
         pre_dir = is_dir(tokens[0])
         post_dir = is_dir(tokens[3])
-        suffix_minus_one = issuffix(tokens[2])
-        suffix_end = issuffix(tokens[3])
-        suffix_plus_one = issuffix(tokens[1])
+        suffix_minus_one = is_suffix(tokens[2])
+        suffix_end = is_suffix(tokens[3])
+        suffix_plus_one = is_suffix(tokens[1])
 
         # W s independence mall W
         if pre_dir.std != '0' and post_dir.std != '0' and suffix_minus_one.std != '0' and ' '.join(
@@ -1944,8 +1942,8 @@ def parse_addr_1(address, item):
     if 5 <= len(tokens) < 7:
         pre_dir = is_dir(tokens[0])
         post_dir = is_dir(tokens[-1])
-        suffix_minus_one = issuffix(tokens[-2])
-        suffix_end = issuffix(tokens[-1])
+        suffix_minus_one = is_suffix(tokens[-2])
+        suffix_end = is_suffix(tokens[-1])
 
         # Streets with 3 or more words/tokens
         # AVENUE OF THE REPUBLIC - no suffix
@@ -2025,8 +2023,8 @@ def parse_addr_1(address, item):
     if token_len == 3:
         pre_dir = is_dir(tokens[0])
         post_dir = is_dir(tokens[2])
-        suffix_minus_one = issuffix(tokens[1])
-        suffix_end = issuffix(tokens[2])
+        suffix_minus_one = is_suffix(tokens[1])
+        suffix_end = is_suffix(tokens[2])
 
         # Last token is junk or apt
         if pre_dir.std == '0' and suffix_minus_one.std != '0' and post_dir.std == '0' and suffix_end.std == '0':
@@ -2066,8 +2064,8 @@ def parse_addr_1(address, item):
     # There's junk
     if token_len > 4:
         pre_dir = is_dir(tokens[0])
-        suffix_minus_one = issuffix(tokens[-2])
-        suffix_end = issuffix(tokens[-1])
+        suffix_minus_one = is_suffix(tokens[-2])
+        suffix_end = is_suffix(tokens[-1])
 
         # predir name suffix junk
         if pre_dir.std != '0' and suffix_minus_one.std == '1':
@@ -2091,7 +2089,7 @@ def parse_addr_1(address, item):
 
     if token_len > 4:
         pre_dir = is_dir(tokens[0])
-        suffix = issuffix(tokens[2])
+        suffix = is_suffix(tokens[2])
         if pre_dir.std != '0' and suffix.std != '0':
             address.street.predir = pre_dir.correct
             address.street.name = ' '.join(name_std(tokens[1:2], True))
@@ -2101,7 +2099,7 @@ def parse_addr_1(address, item):
 
     if token_len > 3:
         pre_dir = is_dir(tokens[0])
-        suffix = issuffix(tokens[1])
+        suffix = is_suffix(tokens[1])
         if pre_dir.std == '0' and suffix.std != '0':
             address.street.predir = ''
             address.street.name = ' '.join(name_std(tokens[0:1], True))
@@ -2111,7 +2109,7 @@ def parse_addr_1(address, item):
 
     if token_len > 5:
         pre_dir = is_dir(tokens[0])
-        suffix = issuffix(tokens[3])
+        suffix = is_suffix(tokens[3])
         if pre_dir.std != '0' and suffix.std != '0':
             address.street.predir = pre_dir.correct
             address.street.name = ' '.join(name_std(tokens[2:4], True))
@@ -2121,8 +2119,8 @@ def parse_addr_1(address, item):
 
     if token_len > 4:
         pre_dir = is_dir(tokens[0])
-        suffix = issuffix(tokens[2])
-        suffix2 = issuffix(tokens[3])
+        suffix = is_suffix(tokens[2])
+        suffix2 = is_suffix(tokens[3])
         if pre_dir.std == '0' and suffix.std != '0':
             address.street.predir = ''
             address.street.name = ' '.join(name_std(tokens[1:2], True))
