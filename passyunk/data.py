@@ -65,6 +65,8 @@ po_box_re = re.compile('^P(\.|OST)? ?O(\.|FFICE)? ?BOX (?P<num>\w+)$')
 
 # latlon_re = re.compile('^[-+]?([1-8]?\d(\.\d+)?|90(\.0+)?),\s*[-+]?(180(\.0+)?|((1[0-7]\d)|([1-9]?\d))(\.\d+)?)$')
 
+opal_location_id_re = re.compile('^L\d{6}$')
+
 # These are all the special characters that are allowed in input addresses.
 # A few chars have to be escaped for regex purposes: - ^ ] \
 SPECIAL_CHARS_ALLOWED = r' \-\\\t/&@,.#'
@@ -91,5 +93,7 @@ AddrType = Enum(['none',  # Any entry not identified below
                  'latlon',  # Lat/Lon wgs84
                  'stateplane',  # NAD_1983_StatePlane_Pennsylvania_South_FIPS_3702_Feet
                  'street',  # MARKET ST
-                 'zipcode',
-                 'landmark'])  # 19125
+                 'zipcode', # 19125
+                 'landmark',  
+                 'opal_location_id', # L000001 (for now)
+                ])

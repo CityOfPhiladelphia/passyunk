@@ -21,7 +21,7 @@ from copy import deepcopy
 
 # Public Data
 from .centerline import create_cl_lookup, get_cl_info, get_cl_info_street2, create_al_lookup # centerline.csv, alias.csv - Public
-from .data import opa_account_re, zipcode_re, po_box_re, mapreg_re, AddrType, \
+from .data import opa_account_re, zipcode_re, po_box_re, mapreg_re, opal_location_id_re, AddrType, \
     ILLEGAL_CHARS_RE, APTFLOOR # suffix.csv - Public
 from .parser_addr import parse_addr_1, name_switch, is_centerline_street_name, is_centerline_street_pre, \
     is_centerline_street_suffix, is_centerline_name, Address # suffix.csv, name_switch.csv, centerline_streets.csv, directional.csv, saint.csv, std.csv, apt.csv, apt_std.csv, apte.csv - Public
@@ -282,6 +282,7 @@ def xy_check(item):
         return 'JUNK'
 
 def parse(item, MAX_RANGE):
+    print("IS THIS THING ON????")
     address_uber = AddressUber()
     address = address_uber.components
     item = '' if item == None else item
@@ -297,6 +298,7 @@ def parse(item, MAX_RANGE):
     regmap_search = mapreg_re.search(item)
     zipcode_search = zipcode_re.search(item)
     po_box_search = po_box_re.search(item)
+    opal_location_id_search = opal_location_id_re.search(item)
     landmark = Landmark(item)
 
     if is_xy:
@@ -309,6 +311,14 @@ def parse(item, MAX_RANGE):
             address_uber.components.output_address = is_xy[1:]
         else:
             address_uber.type = AddrType.none
+
+    elif len(item) == 7 and opal_location_id_search:
+        print("opal location id match found!")
+        address_uber.components.output_address = item
+        address_uber.type = AddrType.opal_location_id 
+        # TODO: consider something that pulls the current highest OPAL location ID in
+        # authoritative table and stores it, so that address_uber.type = AddrType.none
+        # for location IDs over that number
 
     elif len(item) == 9 and opa_account_search:
         address_uber.components.output_address = item
@@ -347,6 +357,7 @@ def parse(item, MAX_RANGE):
         address.street.name = 'PO BOX {}'.format(num)
 
     else:
+        print("opal_location_id not found")
         address = parse_addr_1(address, item)
         if address.street.parse_method == 'UNK':
             address_uber.type = AddrType.none
@@ -444,7 +455,7 @@ def parse(item, MAX_RANGE):
                     address_uber.type != AddrType.mapreg and \
                     address_uber.type != AddrType.latlon and \
                     address_uber.type != AddrType.stateplane and \
-                    address_uber.type != AddrType.zipcode:
+                    address_uber.type != AddrType.zipcode: # does this need more things added, like landmark? opal_location_id? can it become a "not in [list]"?
         if address.address_unit.unit_num != -1:
             address_uber.components.output_address = address.base_address + ' ' + \
                                                      address.floor.floor_type + ' ' + \
