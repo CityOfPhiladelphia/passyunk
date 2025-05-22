@@ -312,8 +312,8 @@ def parse(item, MAX_RANGE):
             address_uber.type = AddrType.none
 
     elif len(item) == 7 and opal_location_id_search:
-        address_uber.components.output_address = item
         address_uber.type = AddrType.opal_location_id 
+        address_uber.components.output_address = item
         # TODO: consider something that pulls the current highest OPAL location ID in
         # authoritative table and stores it, so that address_uber.type = AddrType.none
         # for location IDs over that number
@@ -452,7 +452,8 @@ def parse(item, MAX_RANGE):
                     address_uber.type != AddrType.mapreg and \
                     address_uber.type != AddrType.latlon and \
                     address_uber.type != AddrType.stateplane and \
-                    address_uber.type != AddrType.zipcode: # does this need more things added, like landmark? opal_location_id? can it become a "not in [list]"?
+                    address_uber.type != AddrType.zipcode and \
+                    address_uber.type != AddrType.opal_location_id: # does this need more things added, like landmark? can it become a "not in [list]"?
         if address.address_unit.unit_num != -1:
             address_uber.components.output_address = address.base_address + ' ' + \
                                                      address.floor.floor_type + ' ' + \
