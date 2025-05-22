@@ -282,7 +282,6 @@ def xy_check(item):
         return 'JUNK'
 
 def parse(item, MAX_RANGE):
-    print("IS THIS THING ON????")
     address_uber = AddressUber()
     address = address_uber.components
     item = '' if item == None else item
@@ -313,7 +312,6 @@ def parse(item, MAX_RANGE):
             address_uber.type = AddrType.none
 
     elif len(item) == 7 and opal_location_id_search:
-        print("opal location id match found!")
         address_uber.components.output_address = item
         address_uber.type = AddrType.opal_location_id 
         # TODO: consider something that pulls the current highest OPAL location ID in
@@ -357,7 +355,6 @@ def parse(item, MAX_RANGE):
         address.street.name = 'PO BOX {}'.format(num)
 
     else:
-        print("opal_location_id not found")
         address = parse_addr_1(address, item)
         if address.street.parse_method == 'UNK':
             address_uber.type = AddrType.none
