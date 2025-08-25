@@ -10,6 +10,7 @@ def test_long_jfk(p):
     test_input = "1401 John F. Kennedy Blvd. 10th Floor Philadelphia, PA 19102"
     ans = p.parse(test_input)
     ac = ans["components"]
+    print(ac)
     assert ac["output_address"] == "1401 JOHN F KENNEDY BLVD FL 10"
     assert ac["base_address"] == "1401 JOHN F KENNEDY BLVD"
     assert ac["street"]["full"] == "JOHN F KENNEDY BLVD"
