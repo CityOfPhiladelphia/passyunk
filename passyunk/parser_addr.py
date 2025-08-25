@@ -1585,7 +1585,16 @@ def parse_addr_1(address, item):
         address.street.parse_method = 'UNK'
         return address
 
-    address.mailing.zipcode = handle_city_state_zip(tokens)
+    # hacky way to ensure that city/state/zip are handled properly, i.e. ignore
+    # hacky repositioning of all floor stuff to end
+    if token_len > 2 and tokens[-2] in ['FL', 'FLOOR']:
+        floor_part = tokens[-2:]
+        tokens = tokens[:-2]
+        # act as if floor stuff isn't there...then reattach it
+        address.mailing.zipcode = handle_city_state_zip(tokens)
+        tokens = tokens + floor_part
+    else:
+        address.mailing.zipcode = handle_city_state_zip(tokens)
     token_len = len(tokens)
     if token_len == 0:
         address.street.name = item
