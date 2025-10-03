@@ -1587,7 +1587,7 @@ def parse_addr_1(address, item):
 
     # hacky way to ensure that city/state/zip are handled properly, i.e. ignore
     # hacky repositioning of all floor stuff to end
-    if tokens[-2] in ['FL', 'FLOOR']:
+    if token_len > 2 and tokens[-2] in ['FL', 'FLOOR']:
         floor_part = tokens[-2:]
         tokens = tokens[:-2]
         # act as if floor stuff isn't there...then reattach it
