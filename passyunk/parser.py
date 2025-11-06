@@ -392,6 +392,8 @@ def parse(item, MAX_RANGE):
             address_uber.type = AddrType.street
         if address_uber.type == 'intersection_addr':
             get_cl_info_street2(address)
+            if address.street_2.street_code:
+                address_uber.components.street_2.is_centerline_match = True
 
     # check if landmark if address_uber.type = none, street or = intersection_addr with at least one non-matching street
     if address_uber.type == AddrType.none or (address_uber.type == AddrType.intersection_addr and (
@@ -407,6 +409,8 @@ def parse(item, MAX_RANGE):
                 address_uber.type = AddrType.street
             if address_uber.type == 'intersection_addr':
                 get_cl_info_street2(address)
+                if address.street_2.street_code:
+                    address_uber.components.street_2.is_centerline_match = True
 
     create_full_names(address, address_uber.type)
     # if the users doesn't have the zip4 file, parser will still work
