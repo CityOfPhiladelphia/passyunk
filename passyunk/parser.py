@@ -632,9 +632,7 @@ def input_cleanup(address_uber, item):
     item = item.replace(' UNIT UNIT', ' UNIT ')  # yes this is common
     item = item.replace(' LBBY LBBY', ' LBBY ') # having more than one Apte causes TypeError
     item = item.replace('1 AND 2', ' 1/2 ')
-    item = item.replace(' - ', '-')
-    item = item.replace(' -', '-')
-    item = item.replace('- ', '-')
+    item = re.sub(r'(?<=\d)\s*-\s*(?=\d)', '-', item)
 
     # Remove ES, WS, NS, SS
     item = re.sub(' (NS|SS|ES|WS)$', '', item)
